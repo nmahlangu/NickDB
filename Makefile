@@ -5,10 +5,10 @@
 all: clean client server
 
 client: client.c
-	gcc -O0 -g -std=c99 -Wall -Werror -lreadline client.c -o client
+	gcc -O0 -ggdb -g -std=c99 -Wall -Werror -lreadline client.c -o client
 
 server: server.c
-	gcc -O0 -g -std=c99 -Wall -Werror server.c -o server
+	gcc -O0 -ggdb -g -std=c99 -Wall -Werror server.c -o server
 
 clean:
 	rm -f *.o a.out core client server

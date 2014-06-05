@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <stdbool.h>
 
 // defined constants
 #define QUERY_TYPES 21             // number of supported queries (e.g. select, fetch, update)
@@ -20,7 +21,8 @@ int socketfd;                      // socket file descriptor for the server
 char* queries[QUERY_TYPES];        // array of supported queries
 
 // function prototypes
-void get_query(void);
+void getQuery(void);
+void parseQuery(char* query);
 
 int main(int argc, char const *argv[])
 {
@@ -75,16 +77,16 @@ int main(int argc, char const *argv[])
     // get queries
     while(1)
     {
-        get_query();
+        getQuery();
         usleep(20000);
     }
 }
 
 /*
- *  get_query()
+ *  getQuery()
  *  Gets queries from the command line
  */
- void get_query(void)
+ void getQuery(void)
  {
     // get a string from the command line 
     // determine if the user is typing or piping 
@@ -95,9 +97,41 @@ int main(int argc, char const *argv[])
     if (!isatty(fileno(stdin)) && query != NULL)
         printf("%s\n", query);
 
+    // variables
+    int query_len = strlen(query);
+    query[query_len++] = '\0';
+    bool storage;
+    int storage_a_bytes = 0;
 
+    // write how many characters will be in query
+    write(socketfd, &query_len, sizeof(int));                                            // send        - num of chars to be written
+    printf("Sent 1 (%d bytes)\n", (int)sizeof(int));
+    while ((storage_a_bytes = recv(socketfd, &storage, sizeof(bool), 0)) <= 0);          // receive     - response
+    printf("Received 2 (%d bytes)\n", storage_a_bytes);
+    write(socketfd, query, query_len * sizeof(char));                                    // send (S)    - query string
+    printf("Sent 3 (%d bytes)\n", (int)(query_len * sizeof(char)));
+
+    // get the number of chars in the response message
+    int message_length;
+    int storage_b_bytes = 0;
+    while ((storage_b_bytes = recv(socketfd, &message_length, sizeof(int), 0)) <= 0);    // receive     - num of chars in message
+    printf("Received 4 (%d bytes)\n", storage_b_bytes);
+    write(socketfd, &storage, sizeof(bool));                                             // send        - confirmation
+    printf("Sent 5 (%d bytes)\n", (int)sizeof(bool));
+
+    // get the response message and print it
+    char* response = malloc(message_length * sizeof(char));
+    int storage_c_bytes = 0;
+    while ((storage_c_bytes = recv(socketfd, response, message_length, 0)) <= 0);       // receive (S) - the response message
+    printf("Received 6 (%d bytes)\n", storage_c_bytes);
+    // printf("[%s]\n", response);
+    for (int i = 0; i < message_length; i++)
+        printf("[%c]", response[i]);  
+
+    // clean up and aesthetics
+    free(query);
+    printf("\n");                        
  }
-
 
 
 

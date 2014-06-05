@@ -8,9 +8,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <stdbool.h>
 
 // function prototypes
-void evaluate_commands(int connectionfd);
+void evaluateCommands(int connectionfd);
 
 int main(int argc, char const *argv[])
 {
@@ -47,16 +48,51 @@ int main(int argc, char const *argv[])
     printf("Connection received from file descriptor %d.\n", connectionfd);
     printf("Ready to accept queries from client.\n");
     printf("=====\n");
-    evaluate_commands(connectionfd);
+    evaluateCommands(connectionfd);
 }
 
 /*
- *  evaluate_commands()
+ *  evaluateCommands()
  *  Receives queries from the client and evaluates them
  */
- void evaluate_commands(int connectionfd)
+ void evaluateCommands(int connectionfd)
  {
-    
+    // variables
+    char* query;
+    int num_chars;
+    int storage_a_bytes = 0;
+    int storage_b_bytes = 0;
+    int storage_c_bytes = 0;
+    bool storage = 1;
+    char* temp_response = "The query worked!\n\0";
+    int temp_response_len = strlen(temp_response) + 1;
+
+    // receive queries
+    while(1)
+    {
+        // get length of query
+        while ((storage_a_bytes = recv(connectionfd, &num_chars, sizeof(int), 0)) <= 0);
+        printf("Received 1 (%d bytes)\n", storage_a_bytes);
+        query = malloc(num_chars * sizeof(int));
+        write(connectionfd, &storage, sizeof(bool));
+        printf("Sent 2 (%d bytes)\n", (int)sizeof(bool));
+
+        // TODO - the operators will be called here
+        
+        // write the response message to the client
+        while ((storage_b_bytes = recv(connectionfd, query, num_chars, 0)) <= 0);
+        printf("Number of chars malloced: %d\n", num_chars);
+        for (int i = 0; i < num_chars; i++)
+            printf("[%c]", query[i]);
+        printf("\n");
+        printf("Received 3 (%d bytes)\n", storage_b_bytes);
+        write(connectionfd, &temp_response_len, sizeof(int));
+        printf("Sent 4 (%d bytes)\n", (int)sizeof(int));
+        while ((storage_c_bytes = recv(connectionfd, &storage, sizeof(bool), 0)) <= 0);
+        printf("Received 5 (%d bytes)\n", storage_c_bytes);
+        write(connectionfd, temp_response, temp_response_len);
+        printf("Sent 6 (%d bytes)\n", temp_response_len);
+    }
  }
 
 
