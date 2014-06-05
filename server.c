@@ -64,34 +64,33 @@ int main(int argc, char const *argv[])
     int storage_b_bytes = 0;
     int storage_c_bytes = 0;
     bool storage = 1;
-    char* temp_response = "The query worked!\n\0";
+    char* temp_response = "The query worked!\0";
     int temp_response_len = strlen(temp_response) + 1;
 
     // receive queries
     while(1)
     {
-        // get length of query
+        // print message
+        printf("Query: ");
+        fflush(stdout);
+
+        // get query and its length
         while ((storage_a_bytes = recv(connectionfd, &num_chars, sizeof(int), 0)) <= 0);
-        printf("Received 1 (%d bytes)\n", storage_a_bytes);
         query = malloc(num_chars * sizeof(int));
         write(connectionfd, &storage, sizeof(bool));
-        printf("Sent 2 (%d bytes)\n", (int)sizeof(bool));
-
-        // TODO - the operators will be called here
-        
-        // write the response message to the client
         while ((storage_b_bytes = recv(connectionfd, query, num_chars, 0)) <= 0);
-        printf("Number of chars malloced: %d\n", num_chars);
-        for (int i = 0; i < num_chars; i++)
-            printf("[%c]", query[i]);
-        printf("\n");
-        printf("Received 3 (%d bytes)\n", storage_b_bytes);
+        printf("%s\n", query);
+
+        // operators are called on the query
+        // TODO
+
+        // write a message back to the client
         write(connectionfd, &temp_response_len, sizeof(int));
-        printf("Sent 4 (%d bytes)\n", (int)sizeof(int));
         while ((storage_c_bytes = recv(connectionfd, &storage, sizeof(bool), 0)) <= 0);
-        printf("Received 5 (%d bytes)\n", storage_c_bytes);
         write(connectionfd, temp_response, temp_response_len);
-        printf("Sent 6 (%d bytes)\n", temp_response_len);
+
+        // aesthetics
+        printf("=====\n");
     }
  }
 

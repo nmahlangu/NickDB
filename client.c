@@ -104,33 +104,30 @@ int main(int argc, char const *argv[])
     int storage_a_bytes = 0;
 
     // write how many characters will be in query
-    write(socketfd, &query_len, sizeof(int));                                            // send        - num of chars to be written
-    printf("Sent 1 (%d bytes)\n", (int)sizeof(int));
-    while ((storage_a_bytes = recv(socketfd, &storage, sizeof(bool), 0)) <= 0);          // receive     - response
-    printf("Received 2 (%d bytes)\n", storage_a_bytes);
-    write(socketfd, query, query_len * sizeof(char));                                    // send (S)    - query string
-    printf("Sent 3 (%d bytes)\n", (int)(query_len * sizeof(char)));
+    write(socketfd, &query_len, sizeof(int));          
+    while ((storage_a_bytes = recv(socketfd, &storage, sizeof(bool), 0)) <= 0); 
+    write(socketfd, query, query_len * sizeof(char));                
 
     // get the number of chars in the response message
     int message_length;
     int storage_b_bytes = 0;
-    while ((storage_b_bytes = recv(socketfd, &message_length, sizeof(int), 0)) <= 0);    // receive     - num of chars in message
-    printf("Received 4 (%d bytes)\n", storage_b_bytes);
-    write(socketfd, &storage, sizeof(bool));                                             // send        - confirmation
-    printf("Sent 5 (%d bytes)\n", (int)sizeof(bool));
+    while ((storage_b_bytes = recv(socketfd, &message_length, sizeof(int), 0)) <= 0);    
+    write(socketfd, &storage, sizeof(bool));          
 
     // get the response message and print it
     char* response = malloc(message_length * sizeof(char));
     int storage_c_bytes = 0;
-    while ((storage_c_bytes = recv(socketfd, response, message_length, 0)) <= 0);       // receive (S) - the response message
-    printf("Received 6 (%d bytes)\n", storage_c_bytes);
-    // printf("[%s]\n", response);
-    for (int i = 0; i < message_length; i++)
-        printf("[%c]", response[i]);  
+    while ((storage_c_bytes = recv(socketfd, response, message_length, 0)) <= 0);       
+    printf("%s\n", response);
+
+    // ******* DO NOT DELETE | USED TO TEST FOR NULL TERMINATOR ******** //
+    // for (int i = 0; i < message_length; i++)
+    //     printf("[%c]", response[i]);  
+    // fflush(stdout);
 
     // clean up and aesthetics
     free(query);
-    printf("\n");                        
+    printf("=====\n");                        
  }
 
 
