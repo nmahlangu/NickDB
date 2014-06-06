@@ -12,6 +12,12 @@
 
 // function prototypes
 void evaluateCommands(int connectionfd);
+void parseQuery(int connectionfd, char* query);
+void create(int connectionfd, char* query);
+
+// for error handling and quitting
+void raiseException(int connectionfd, char* function, char* exception);
+void quit(void);
 
 int main(int argc, char const *argv[])
 {
@@ -81,8 +87,8 @@ int main(int argc, char const *argv[])
         while ((storage_b_bytes = recv(connectionfd, query, num_chars, 0)) <= 0);
         printf("%s\n", query);
 
-        // operators are called on the query
-        // TODO
+        // parse query and call appropriate operator
+        parseQuery(connectionfd, query);
 
         // write a message back to the client
         write(connectionfd, &temp_response_len, sizeof(int));
@@ -93,6 +99,67 @@ int main(int argc, char const *argv[])
         printf("=====\n");
     }
  }
+
+/*
+ *  parseQuery()
+ *  Error checks and if the query is valid, it calls the appropriate
+ *  operator for the query
+ */
+ void parseQuery(int connectionfd, char* query)
+ {
+    // error checking
+    if (query == NULL)
+        raiseException(connectionfd, "parseQuery\0", "Query was NULL\0");
+
+    // check for keyword "create"
+    if (strstr(query, "create") != NULL)
+        create(connectionfd, query);
+ }
+
+/*
+ *  raiseException()
+ *  Is called when incorrect behavior occurs
+ */
+ void raiseException(int connectionfd, char* function, char* exception)
+ {
+    // print exception, close client, and quit
+    printf("Exception raised in function %s(): %s\n", function, exception);
+    quit();
+    exit(1);
+ }
+
+/*
+ *  quit
+ *  Is called anytime the program is correctly quitting
+ */
+void quit(void)
+{
+    close(connectionfd);
+    printf("=====\n");
+}
+
+/*
+ *  create
+ *  Is used to create a column (represented as a binary file on disk) in the 
+ *  database
+ */
+ void create(int connectionfd, char* query)
+ {
+    // error checking
+    if (query == NULL)
+        raiseException(connectionfd, "create", "Query was NULL");
+
+    // parse the query
+    
+ }
+
+
+
+
+
+
+
+
 
 
 
