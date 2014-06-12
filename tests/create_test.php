@@ -12,3 +12,4 @@
 		for ($i = 0; $i < 26; $i++)
 			echo $prefix . $insert . $j . chr($letter + $i) . $suffix . PHP_EOL;
 	}
+	echo "Quit\n";
