@@ -24,6 +24,9 @@ char* queries[QUERY_TYPES];        // array of supported queries
 void getQuery(void);
 void parseQuery(char* query);
 
+// error handling
+void quit(void);
+
 int main(int argc, char const *argv[])
 {
     // set up a socket and get the file descriptor of the server
@@ -58,7 +61,7 @@ int main(int argc, char const *argv[])
     if (connect(socketfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
        printf("The call to socket() failed, please wait a few seconds and try again.\n");
-       return 1;
+       return 2;
     }
 
     // print message
@@ -103,10 +106,17 @@ int main(int argc, char const *argv[])
     bool storage;
     int storage_a_bytes = 0;
 
-    // write how many characters will be in query
+    // write the query length then the query
     write(socketfd, &query_len, sizeof(int));          
     while ((storage_a_bytes = recv(socketfd, &storage, sizeof(bool), 0)) <= 0); 
-    write(socketfd, query, query_len * sizeof(char));                
+    write(socketfd, query, query_len * sizeof(char));      
+
+    // check if quitting  
+    if (strcmp(query, "Quit\0") == 0)
+    {
+        printf("Goodbye.\n");
+        quit();        
+    }
 
     // get the number of chars in the response message
     int message_length;
@@ -130,6 +140,16 @@ int main(int argc, char const *argv[])
     free(query);
     printf("=====\n");                        
  }
+
+/*
+ *  quit()
+ *  Is called anytime the program is correctly quitting
+ */
+void quit(void)
+{
+    printf("=====\n");
+    exit(1);
+}
 
 
 

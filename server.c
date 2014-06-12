@@ -71,8 +71,8 @@ int main(int argc, char const *argv[])
  *  evaluateCommands()
  *  Receives queries from the client and evaluates them
  */
- void evaluateCommands(int connectionfd)
- {
+void evaluateCommands(int connectionfd)
+{
     // variables
     char* query;
     int num_chars;
@@ -108,31 +108,38 @@ int main(int argc, char const *argv[])
         // aesthetics
         printf("=====\n");
     }
- }
+}
 
 /*
  *  parseQuery()
  *  Error checks and if the query is valid, it calls the appropriate
  *  operator for the query
  */
- void parseQuery(int connectionfd, char* query)
- {
+void parseQuery(int connectionfd, char* query)
+{
     // error checking
     if (query == NULL)
         raiseError(connectionfd, "parseQuery\0", "Query was NULL.\0", NULL);
 
+    // if quitting
+    if (strcmp(query, "Quit\0") == 0)
+    {
+        printf("Goodbye.\n");
+        quit(connectionfd);
+    }
+
     // check for keyword "create"
     if (strstr(query, "create") != NULL)
         create(connectionfd, query);
- }
+}
 
 /*
  *  raiseError()
  *  Is called when incorrect behavior occurs
- *  Note: exception_info is an optional argument, is not pertinent if NULL
+ *  Note: exception_info is an optional argument, NULL if not needed
  */
- void raiseError(int connectionfd, char* function, char* exception, char* exception_info)
- {
+void raiseError(int connectionfd, char* function, char* exception, char* exception_info)
+{
     // print exception, close client, and quit
     if ((exception == NULL) && (exception_info == NULL))
         printf("Both arguments passed to raiseError() were NULL.\n");
@@ -168,7 +175,7 @@ int main(int argc, char const *argv[])
 
     // exit gracefully
     quit(connectionfd);
- }
+}
 
 /*
  *  quit()
@@ -186,8 +193,8 @@ void quit(int connectionfd)
  *  Is used to create a column (represented as a binary file on disk) in the 
  *  database
  */
- void create(int connectionfd, char* query)
- {
+void create(int connectionfd, char* query)
+{
     // error checking
     if (query == NULL)
         raiseError(connectionfd, "create\0", "Query was NULL\0", NULL);
@@ -222,12 +229,13 @@ void quit(int connectionfd)
     fclose(fp);
 
     // create a message for the client
+    // the +1s are so that it terminates each string
     char* prefix = "Created column `\0";
     char* suffix = "` in the database.\0";
     char* message = malloc(strlen(prefix) + strlen(suffix) + strlen(column) + 1);
-    strncat(message, prefix, strlen(prefix));
-    strncat(message, column, strlen(column));
-    strncat(message, suffix, strlen(suffix));
+    strncpy(message, prefix, strlen(prefix) + 1);
+    strncpy(message + strlen(prefix), column, strlen(column) + 1);
+    strncpy(message + strlen(prefix) + strlen(column), suffix, strlen(suffix) + 1);
 
     // variables for socket transfer
     int message_len = strlen(message) + 1;
@@ -242,7 +250,7 @@ void quit(int connectionfd)
     // print the message in the server and cleanup
     printf("%s\n", message);
     free(message);
- }
+}
 
 /*
  *  createDatabaseDirectoryIfNotPresent()
