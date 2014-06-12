@@ -3,9 +3,12 @@
 	// template
 	$prefix = "create(";
 	$suffix = ',"unsorted")';
-	$insert = "t1";
+	$insert = "t";
 	$letter = 97;
 
 	// do all 26 letters
-	for ($i = 0; $i < 26; $i++)
-		echo $prefix . $insert . chr($letter + $i) . $suffix . PHP_EOL;
+	for ($j = 1; $j < 100; $j++)
+	{
+		for ($i = 0; $i < 26; $i++)
+			echo $prefix . $insert . $j . chr($letter + $i) . $suffix . PHP_EOL;
+	}
