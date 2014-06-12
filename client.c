@@ -126,6 +126,7 @@ int main(int argc, char const *argv[])
     // fflush(stdout);
 
     // clean up and aesthetics
+    free(response);
     free(query);
     printf("=====\n");                        
  }
