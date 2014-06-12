@@ -78,10 +78,7 @@ void evaluateCommands(int connectionfd)
     int num_chars;
     int storage_a_bytes = 0;
     int storage_b_bytes = 0;
-    // int storage_c_bytes = 0;
     bool storage = 1;
-    // char* temp_response = "The query worked!\0";
-    // int temp_response_len = strlen(temp_response) + 1;
 
     // receive queries
     while(1)
@@ -99,11 +96,6 @@ void evaluateCommands(int connectionfd)
 
         // parse query and call appropriate operator
         parseQuery(connectionfd, query);
-
-        // write a message back to the client
-        // write(connectionfd, &temp_response_len, sizeof(int));
-        // while ((storage_c_bytes = recv(connectionfd, &storage, sizeof(bool), 0)) <= 0);
-        // write(connectionfd, temp_response, temp_response_len);
 
         // aesthetics
         printf("=====\n");

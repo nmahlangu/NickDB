@@ -70,12 +70,12 @@ int main(int argc, char const *argv[])
     printf("=====\n");
 
     // define the supported queries
-    queries[0] = "select";    queries[1] = "fetch";     queries[2] = "create";    queries[3] = "load";
-    queries[4] = "insert";    queries[5] = "tuple";     queries[6] = "min";       queries[7] = "max";
-    queries[8] = "sum";       queries[9] = "avg";       queries[10] = "add";      queries[11] = "sub";
-    queries[12] = "mul";      queries[13] = "div";      queries[14] = "print";    queries[15] = "hashjoin";
-    queries[16] = "sortjoin"; queries[17] = "loopjoin"; queries[18] = "treejoin"; queries[19] = "delete";
-    queries[20] = "update";
+    queries[0] = "select\0";    queries[1] = "fetch\0";     queries[2] = "create\0";    queries[3] = "load\0";
+    queries[4] = "insert\0";    queries[5] = "tuple\0";     queries[6] = "min\0";       queries[7] = "max\0";
+    queries[8] = "sum\0";       queries[9] = "avg\0";       queries[10] = "add\0";      queries[11] = "sub\0";
+    queries[12] = "mul\0";      queries[13] = "div\0";      queries[14] = "print\0";    queries[15] = "hashjoin\0";
+    queries[16] = "sortjoin\0"; queries[17] = "loopjoin\0"; queries[18] = "treejoin\0"; queries[19] = "delete\0";
+    queries[20] = "update\0";
 
     // get queries
     while(1)
@@ -89,8 +89,8 @@ int main(int argc, char const *argv[])
  *  getQuery()
  *  Gets queries from the command line
  */
- void getQuery(void)
- {
+void getQuery(void)
+{
     // get a string from the command line 
     // determine if the user is typing or piping 
     char* query = malloc(BUFSIZ * sizeof(char));
@@ -139,7 +139,7 @@ int main(int argc, char const *argv[])
     free(response);
     free(query);
     printf("=====\n");                        
- }
+}
 
 /*
  *  quit()
