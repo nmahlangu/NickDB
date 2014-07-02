@@ -114,14 +114,14 @@ void parseQuery(int connectionfd, char* query)
         raiseError(connectionfd, "parseQuery\0", "Query was NULL.\0", NULL);
 
     // if quitting
-    if (strcmp(query, "Quit\0") == 0)
+    else if (strcmp(query, "Quit\0") == 0)
     {
         printf("Goodbye.\n");
         quit(connectionfd);
     }
 
     // check for keyword "create"
-    if (strstr(query, "create") != NULL)
+    else if (strstr(query, "create") != NULL)
         create(connectionfd, query);
 }
 

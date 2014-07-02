@@ -1,9 +1,9 @@
 NickDB
 ======
-NickDB is a relational database based on Harvard Computer Science 165's semester-long
+PersonalDB is a relational database based on Harvard Computer Science 165's semester-long
 database project.
 
 
 List of differences
 ===================
-- NickDB does not support multiple clients and therefore does not use a threadpool
+- PersonalDB does not support multiple clients and therefore does not use a threadpool
