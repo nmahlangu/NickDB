@@ -20,6 +20,7 @@
 void evaluateCommands(int connectionfd);
 void parseQuery(int connectionfd, char* query);
 void writeResponseToClient(int connectionfd, char* response);
+char* createCustomMessage(int connectionfd, char* prefix, char* stringToBeInserted, char* suffix);
 void createOperator(int connectionfd, char* query);
 void selectOperator(int connectionfd, char* query);
 void createDatabaseDirectoryIfNotPresent(void);
@@ -193,7 +194,7 @@ void raiseError(int connectionfd, char* function, char* exception, char* excepti
     }
 
     // tell the client the query was not evaluated
-    char* errorMessage = "Query was not evauluated, see the server for an error log.\0";
+    char* errorMessage = "Query was not evaluated, see the server for an error log.\0";
     writeResponseToClient(connectionfd, errorMessage);
 
     // exit gracefully
@@ -249,6 +250,40 @@ void writeResponseToClient(int connectionfd, char* response)
     while ((bytesReceivedFromClient = recv(connectionfd, &storageBool, sizeof(bool), 0)) <= 0);
     write(connectionfd, response, responseLength);
 }
+
+/*
+ *  createCustomMessage()
+ *  Returns a custom, concatenated string from 3 substrings
+ */
+ char* createCustomMessage(int connectionfd, char* prefix, char* stringToBeInserted, char* suffix)
+ {
+    // error checking
+    if (prefix == NULL)
+    {
+        raiseError(connectionfd, "createCustomMessage\0", "prefix was NULL\0", NULL);
+        return NULL;
+    }
+    else if (stringToBeInserted == NULL)
+    {
+        raiseError(connectionfd, "createCustomMessage\0", "stringToBeInserted was NULL\0", NULL);
+        return NULL;
+    }
+    else if (suffix == NULL)
+    {
+        raiseError(connectionfd, "createCustomMessage\0", "suffix was NULL\0", NULL);
+        return NULL;
+    }
+
+    // create and return the message
+    char* space = " \0";
+    char* message = malloc(strlen(prefix) + strlen(stringToBeInserted) + strlen(suffix) + 5);
+    strncpy(message, prefix, strlen(prefix) + 1);
+    strncpy(message + strlen(prefix), space, strlen(space) + 1);
+    strncpy(message + strlen(prefix) + strlen(space), stringToBeInserted, strlen(stringToBeInserted) + 1);
+    strncpy(message + strlen(prefix) + strlen(space) + strlen(stringToBeInserted), space, strlen(space) + 1);
+    strncpy(message + strlen(prefix) + (2 * strlen(space)) + strlen(stringToBeInserted), suffix, strlen(suffix) + 1);
+    return message;
+ }
 
 /*
  *  create()
@@ -351,24 +386,29 @@ void selectOperator(int connectionfd, char* query)
         return;
     }
 
-    // create [error] messages
-    char* prefix = "Successfully selected values from the column `\0";
-    char* successfulSelectMessage = malloc(strlen(prefix) + strlen(firstArgument) + 3);
-    strncpy(successfulSelectMessage, prefix, strlen(prefix) + 1);
-    strncpy(successfulSelectMessage + strlen(prefix), firstArgument, strlen(firstArgument) + 1);
-    strncpy(successfulSelectMessage + strlen(firstArgument) + strlen(prefix), "`.\0", 3);
-    char* failedSelectMessage = "Unable to do this selection. The column ~ does not exist in the database\0";
-
     // open column and see if it's valid
     char* column = malloc(strlen(firstArgument) + 3);
     sprintf(column, "db/%s",firstArgument);
     FILE* fp = fopen(column, "rb");
     if (fp == NULL)
     {
-        raiseError(connectionfd, "selectOperator\0", failedSelectMessage, firstArgument);
+        raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not exist in the database", firstArgument);
         free(column);
+        return;
     }
 
+    // read the header to see what kind of storage the file has
+    int headerInteger;
+    fread(&headerInteger, sizeof(int), 1, fp);
+    if ((headerInteger != UNSORTED) && (headerInteger != SORTED) && (headerInteger != BTREE))
+    {
+        raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not have valid header info", NULL);
+        free(column);
+        fclose(fp);
+        return;
+    }
+    char* mess = createCustomMessage(connectionfd, "Test message: Unable to insert", firstArgument, "into the database");
+    printf("[%s]\n", mess);
 }
 
 

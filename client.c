@@ -134,12 +134,6 @@ void getQuery(void)
     while ((storage_c_bytes = recv(socketfd, response, message_length, 0)) <= 0);       
     printf("%s\n", response);
 
-    // quit if an error occurred on the server
-    // if (strcmp(response, "Quitting due to an error, see the server for an error log.\0") == 0)
-    // {
-    //     quit();
-    // }
-
     // ******* DO NOT DELETE | USED TO TEST FOR NULL TERMINATOR ******** //
     // for (int i = 0; i < message_length; i++)
     //     printf("[%c]", response[i]);  
