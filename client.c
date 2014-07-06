@@ -95,10 +95,14 @@ void getQuery(void)
     // determine if the user is typing or piping 
     char* query = malloc(BUFSIZ * sizeof(char));
     if (!isatty(fileno(stdin)))
+    {
         printf("Query: ");
+    }
     query = readline("Query: ");
     if (!isatty(fileno(stdin)) && query != NULL)
+    {
         printf("%s\n", query);
+    }
 
     // variables
     int query_len = strlen(query);
@@ -129,6 +133,12 @@ void getQuery(void)
     int storage_c_bytes = 0;
     while ((storage_c_bytes = recv(socketfd, response, message_length, 0)) <= 0);       
     printf("%s\n", response);
+
+    // quit if an error occurred on the server
+    if (strcmp(response, "Quitting due to an error, see the server for an error log.\0") == 0)
+    {
+        quit();
+    }
 
     // ******* DO NOT DELETE | USED TO TEST FOR NULL TERMINATOR ******** //
     // for (int i = 0; i < message_length; i++)

@@ -112,7 +112,9 @@ void parseQuery(int connectionfd, char* query)
 {
     // error checking
     if (query == NULL)
+    {
         raiseError(connectionfd, "parseQuery\0", "Query was NULL\0", NULL);
+    }
 
     // if quitting
     else if ((strcmp(query, "Quit\0") == 0) || (strcmp(query, "quit\0") == 0))
@@ -123,11 +125,15 @@ void parseQuery(int connectionfd, char* query)
 
     // check for keyword "create"
     else if (strstr(query, "create") != NULL)
+    {
         createOperator(connectionfd, query);
+    }
 
     // check for keyword "select"
     else if (strstr(query, "select") != NULL)
+    {
         selectOperator(connectionfd, query);
+    }
 
     // if not a valid command
     else
@@ -146,9 +152,13 @@ void raiseError(int connectionfd, char* function, char* exception, char* excepti
 {
     // print exception, close client, and quit
     if ((exception == NULL) && (exception_info == NULL))
+    {
         printf("Both arguments passed to raiseError() were NULL.\n");
+    }
     else if (exception_info == NULL)
+    {
         printf("Exception raised in function %s(): %s.\n", function, exception);
+    }
     else
     {
         int tilda_index = -1;
@@ -176,6 +186,15 @@ void raiseError(int connectionfd, char* function, char* exception, char* excepti
             printf(".\n");
         }
     }
+
+    // tell the client to quit
+    char* errorMessage = "Quitting due to an error, see the server for an error log.\0";
+    int errorMessageLength = strlen(errorMessage) + 1;
+    int bytesReceivedFromClient = 0;
+    bool storageBool;
+    write(connectionfd, &errorMessageLength, sizeof(int));
+    while ((bytesReceivedFromClient = recv(connectionfd, &storageBool, sizeof(bool), 0)) <= 0);
+    write(connectionfd, errorMessage, errorMessageLength);
 
     // exit gracefully
     quit(connectionfd);
@@ -217,7 +236,9 @@ void createOperator(int connectionfd, char* query)
 {
     // error checking
     if (query == NULL)
-        raiseError(connectionfd, "create\0", "Query was NULL\0", NULL);
+    {
+        raiseError(connectionfd, "createOperator\0", "Query was NULL\0", NULL);
+    }
 
     // parse the query
     char* last;
@@ -225,26 +246,36 @@ void createOperator(int connectionfd, char* query)
     char* column = strtok_r(NULL, ",", &last);
     char* storage = strtok_r(NULL, ")", &last);
     if (column == NULL || storage == NULL)
-        raiseError(connectionfd, "create\0", "The specified column or storage was NULL\0", NULL);
+    {
+        raiseError(connectionfd, "createOperator\0", "The specified column or storage was NULL\0", NULL);
+    }
     else if (!((strcmp(storage, "\"unsorted\"") == 0) || (strcmp(storage, "\"sorted\"") == 0) || (strcmp(storage, "\"b+tree\"") == 0)))
-        raiseError(connectionfd, "create\0", "The specified storage does not match unsorted, sorted, or b+tree\0", NULL);
+    {
+        raiseError(connectionfd, "createOperator\0", "The specified storage does not match unsorted, sorted, or b+tree\0", NULL);
+    }
 
     // capture the storage type
     int storage_id = (strcmp(storage, "\"unsorted\"") == 0) ? UNSORTED : 
                        ((strcmp(storage, "\"sorted\"") == 0)   ? SORTED  :
                        ((strcmp(storage, "\"b+tree\"") == 0)   ? BTREE   : -1));
     if ((storage_id != UNSORTED) && (storage_id != SORTED) && (storage_id != BTREE))
-        raiseError(connectionfd, "create\0", "The specified storage does not match the storage id for either unsorted, sorted, or b+tree\0", NULL);
+    {
+        raiseError(connectionfd, "createOperator\0", "The specified storage does not match the storage id for either unsorted, sorted, or b+tree\0", NULL);
+    }
 
     // create a file with the appropriate header
     char* path = malloc(4 + strlen(column));
     path[0] = 'd'; path[1] = 'b'; path[2] = '/';
     strncat(path, column, strlen(column));
     if (path == NULL)
-        raiseError(connectionfd, "create\0", "The path for the column ~ was NULL\0", column);
+    {
+        raiseError(connectionfd, "createOperator\0", "The path for the column ~ was NULL\0", column);
+    }
     FILE* fp = fopen(path, "wb");
     if (fp == NULL)
-        raiseError(connectionfd, "create\0", "The filepointer created for the path ~ was NULL\0", path);
+    {
+        raiseError(connectionfd, "createOperator\0", "The filepointer created for the path ~ was NULL\0", path);
+    }
     fwrite(&storage_id, sizeof(int), 1, fp);
     fclose(fp);
 
@@ -281,10 +312,31 @@ void selectOperator(int connectionfd, char* query)
 {
     // error checking
     if (query == NULL)
-        raiseError(connectionfd, "select\0", "Query was NULL\0", NULL);
+    {
+        raiseError(connectionfd, "selectOperator\0", "Query was NULL\0", NULL);
+    }
 
     // parse the query
+    printf("Query: [%s]\n", query);
+    char* last;
+    strtok_r(query, "(", &last);
+    char* firstArgument = strtok_r(NULL, ",)", &last);
+    //char* secondArgument = strtok_r(NULL, ",)", &last);
+    //char* thirdArgument = strtok_r(NULL, ",)", &last);
+    if (firstArgument == NULL)
+    {
+        raiseError(connectionfd, "selectOperator\0", "firstArgument of the query was NULL\0", NULL);
+    }
 
+    // make sure the file to select from is valid
+    char* prefix = "Successfully selected values from the column `\0";
+    char* successfulSelectMessage = malloc(strlen(prefix) + strlen(firstArgument) + 3);
+    strncpy(successfulSelectMessage, prefix, strlen(prefix) + 1);
+    strncpy(successfulSelectMessage + strlen(prefix), firstArgument, strlen(firstArgument) + 1);
+    strncpy(successfulSelectMessage + strlen(firstArgument) + strlen(prefix), "`.\0", 3);
+    //char* failedSelectMessage = "Unable to do this selection. The specified column does not exist in the database\0";
+
+    printf("[%s]\n", successfulSelectMessage);
 }
 
 
