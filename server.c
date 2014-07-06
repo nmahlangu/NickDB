@@ -343,13 +343,15 @@ void createOperator(int connectionfd, char* query)
     fclose(fp);
 
     // create a message and write it to the client
-    // the +1s are so that it terminates each string
     char* prefix = "Created column `\0";
     char* suffix = "` in the database.\0";
-    char* message = malloc(strlen(prefix) + strlen(suffix) + strlen(column) + 1);
-    strncpy(message, prefix, strlen(prefix) + 1);
-    strncpy(message + strlen(prefix), column, strlen(column) + 1);
-    strncpy(message + strlen(prefix) + strlen(column), suffix, strlen(suffix) + 1);
+    char* message = createCustomMessage(connectionfd, prefix, column, suffix);
+    if (message == NULL)
+    {
+        printf("Select operation was aborted due to above exception.\n");
+        free(path);
+        return;
+    }
     writeResponseToClient(connectionfd, message);
 
     // print the message in the server and cleanup
@@ -404,8 +406,7 @@ void selectOperator(int connectionfd, char* query)
         fclose(fp);
         return;
     }
-    char* mess = createCustomMessage(connectionfd, "Test message: Unable to insert `", firstArgument, "` into the database");
-    printf("[%s]\n", mess);
+    
 }
 
 
