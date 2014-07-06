@@ -274,14 +274,11 @@ void writeResponseToClient(int connectionfd, char* response)
         return NULL;
     }
 
-    // create and return the message
-    char* space = " \0";
-    char* message = malloc(strlen(prefix) + strlen(stringToBeInserted) + strlen(suffix) + 5);
+    // create and return the concatenated string
+    char* message = malloc(strlen(prefix) + strlen(stringToBeInserted) + strlen(suffix) + 3);
     strncpy(message, prefix, strlen(prefix) + 1);
-    strncpy(message + strlen(prefix), space, strlen(space) + 1);
-    strncpy(message + strlen(prefix) + strlen(space), stringToBeInserted, strlen(stringToBeInserted) + 1);
-    strncpy(message + strlen(prefix) + strlen(space) + strlen(stringToBeInserted), space, strlen(space) + 1);
-    strncpy(message + strlen(prefix) + (2 * strlen(space)) + strlen(stringToBeInserted), suffix, strlen(suffix) + 1);
+    strncpy(message + strlen(prefix), stringToBeInserted, strlen(stringToBeInserted) + 1);
+    strncpy(message + strlen(prefix) + strlen(stringToBeInserted), suffix, strlen(suffix) + 1);
     return message;
  }
 
@@ -407,7 +404,7 @@ void selectOperator(int connectionfd, char* query)
         fclose(fp);
         return;
     }
-    char* mess = createCustomMessage(connectionfd, "Test message: Unable to insert", firstArgument, "into the database");
+    char* mess = createCustomMessage(connectionfd, "Test message: Unable to insert `", firstArgument, "` into the database");
     printf("[%s]\n", mess);
 }
 
