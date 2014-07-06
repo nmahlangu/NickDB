@@ -19,6 +19,7 @@
 // function prototypes
 void evaluateCommands(int connectionfd);
 void parseQuery(int connectionfd, char* query);
+void writeResponseToClient(int connectionfd, char* response);
 void createOperator(int connectionfd, char* query);
 void selectOperator(int connectionfd, char* query);
 void createDatabaseDirectoryIfNotPresent(void);
@@ -114,6 +115,7 @@ void parseQuery(int connectionfd, char* query)
     if (query == NULL)
     {
         raiseError(connectionfd, "parseQuery\0", "Query was NULL\0", NULL);
+        return;
     }
 
     // if quitting
@@ -139,7 +141,7 @@ void parseQuery(int connectionfd, char* query)
     else
     {
         raiseError(connectionfd, "parseQuery\0", "Query was not a valid command\0", NULL);
-        quit(connectionfd);
+        return;
     }
 }
 
@@ -150,17 +152,20 @@ void parseQuery(int connectionfd, char* query)
  */
 void raiseError(int connectionfd, char* function, char* exception, char* exception_info)
 {
-    // print exception, close client, and quit
+    // error checking
     if ((exception == NULL) && (exception_info == NULL))
     {
         printf("Both arguments passed to raiseError() were NULL.\n");
     }
+    // if not supplementary information was provided
     else if (exception_info == NULL)
     {
         printf("Exception raised in function %s(): %s.\n", function, exception);
     }
+    // if supplementary information was given
     else
     {
+        // determine where to insert the supplementary information
         int tilda_index = -1;
         for (int i = 0, len = strlen(exception); i < len; i++)
         {
@@ -172,9 +177,9 @@ void raiseError(int connectionfd, char* function, char* exception, char* excepti
         }
         if (tilda_index == -1)
             printf("No tilda exists in the exception string, format is therefore incorrect.\n");
+        // insert the supplementary information in place of the tilda
         else
         {
-            // replace the tilda with the extra info
             for (int i = 0; i < tilda_index; i++)
                 printf("%c", exception[i]);
             printf("`%s`", exception_info);
@@ -187,28 +192,12 @@ void raiseError(int connectionfd, char* function, char* exception, char* excepti
         }
     }
 
-    // tell the client to quit
-    char* errorMessage = "Quitting due to an error, see the server for an error log.\0";
-    int errorMessageLength = strlen(errorMessage) + 1;
-    int bytesReceivedFromClient = 0;
-    bool storageBool;
-    write(connectionfd, &errorMessageLength, sizeof(int));
-    while ((bytesReceivedFromClient = recv(connectionfd, &storageBool, sizeof(bool), 0)) <= 0);
-    write(connectionfd, errorMessage, errorMessageLength);
+    // tell the client the query was not evaluated
+    char* errorMessage = "Query was not evauluated, see the server for an error log.\0";
+    writeResponseToClient(connectionfd, errorMessage);
 
     // exit gracefully
-    quit(connectionfd);
-}
-
-/*
- *  quit()
- *  Is called anytime the program is correctly quitting
- */
-void quit(int connectionfd)
-{
-    close(connectionfd);
-    printf("=====\n");
-    exit(1);
+    // quit(connectionfd);
 }
 
 /*
@@ -228,6 +217,40 @@ void createDatabaseDirectoryIfNotPresent(void)
 }
 
 /*
+ *  quit()
+ *  Is called anytime the program is correctly quitting
+ */
+void quit(int connectionfd)
+{
+    close(connectionfd);
+    printf("=====\n");
+    exit(1);
+}
+
+/*
+ *  writeResponseToClient()
+ *  Is used to write a response to the client after a query has executed.
+ *  Note: response must be NULL terminated
+ */
+void writeResponseToClient(int connectionfd, char* response)
+{
+    // error checking
+    if (response == NULL)
+    {
+        raiseError(connectionfd, "writeResponseToClient\0", "response to write to the client was NULL\0", NULL);
+        return;
+    }
+
+    // write the response to the client
+    int responseLength = strlen(response) + 1;
+    int bytesReceivedFromClient = 0;
+    bool storageBool;
+    write(connectionfd, &responseLength, sizeof(int));
+    while ((bytesReceivedFromClient = recv(connectionfd, &storageBool, sizeof(bool), 0)) <= 0);
+    write(connectionfd, response, responseLength);
+}
+
+/*
  *  create()
  *  Is used to create a column (represented as a binary file on disk) in the 
  *  database
@@ -238,6 +261,7 @@ void createOperator(int connectionfd, char* query)
     if (query == NULL)
     {
         raiseError(connectionfd, "createOperator\0", "Query was NULL\0", NULL);
+        return;
     }
 
     // parse the query
@@ -248,10 +272,12 @@ void createOperator(int connectionfd, char* query)
     if (column == NULL || storage == NULL)
     {
         raiseError(connectionfd, "createOperator\0", "The specified column or storage was NULL\0", NULL);
+        return;
     }
     else if (!((strcmp(storage, "\"unsorted\"") == 0) || (strcmp(storage, "\"sorted\"") == 0) || (strcmp(storage, "\"b+tree\"") == 0)))
     {
         raiseError(connectionfd, "createOperator\0", "The specified storage does not match unsorted, sorted, or b+tree\0", NULL);
+        return;
     }
 
     // capture the storage type
@@ -261,6 +287,7 @@ void createOperator(int connectionfd, char* query)
     if ((storage_id != UNSORTED) && (storage_id != SORTED) && (storage_id != BTREE))
     {
         raiseError(connectionfd, "createOperator\0", "The specified storage does not match the storage id for either unsorted, sorted, or b+tree\0", NULL);
+        return;
     }
 
     // create a file with the appropriate header
@@ -270,16 +297,18 @@ void createOperator(int connectionfd, char* query)
     if (path == NULL)
     {
         raiseError(connectionfd, "createOperator\0", "The path for the column ~ was NULL\0", column);
+        return;
     }
     FILE* fp = fopen(path, "wb");
     if (fp == NULL)
     {
         raiseError(connectionfd, "createOperator\0", "The filepointer created for the path ~ was NULL\0", path);
+        return;
     }
     fwrite(&storage_id, sizeof(int), 1, fp);
     fclose(fp);
 
-    // create a message for the client
+    // create a message and write it to the client
     // the +1s are so that it terminates each string
     char* prefix = "Created column `\0";
     char* suffix = "` in the database.\0";
@@ -287,16 +316,7 @@ void createOperator(int connectionfd, char* query)
     strncpy(message, prefix, strlen(prefix) + 1);
     strncpy(message + strlen(prefix), column, strlen(column) + 1);
     strncpy(message + strlen(prefix) + strlen(column), suffix, strlen(suffix) + 1);
-
-    // variables for socket transfer
-    int message_len = strlen(message) + 1;
-    int storage_c_bytes = 0;
-    bool storage_bool = 1;
-
-    // write the message to the client
-    write(connectionfd, &message_len, sizeof(int));
-    while ((storage_c_bytes = recv(connectionfd, &storage_bool, sizeof(bool), 0)) <= 0);
-    write(connectionfd, message, message_len);
+    writeResponseToClient(connectionfd, message);
 
     // print the message in the server and cleanup
     printf("%s\n", message);
@@ -314,6 +334,7 @@ void selectOperator(int connectionfd, char* query)
     if (query == NULL)
     {
         raiseError(connectionfd, "selectOperator\0", "Query was NULL\0", NULL);
+        return;
     }
 
     // parse the query
@@ -326,6 +347,7 @@ void selectOperator(int connectionfd, char* query)
     if (firstArgument == NULL)
     {
         raiseError(connectionfd, "selectOperator\0", "firstArgument of the query was NULL\0", NULL);
+        return;
     }
 
     // make sure the file to select from is valid
@@ -336,8 +358,9 @@ void selectOperator(int connectionfd, char* query)
     strncpy(successfulSelectMessage + strlen(firstArgument) + strlen(prefix), "`.\0", 3);
     //char* failedSelectMessage = "Unable to do this selection. The specified column does not exist in the database\0";
 
-    printf("[%s]\n", successfulSelectMessage);
 }
+
+
 
 
 

@@ -135,10 +135,10 @@ void getQuery(void)
     printf("%s\n", response);
 
     // quit if an error occurred on the server
-    if (strcmp(response, "Quitting due to an error, see the server for an error log.\0") == 0)
-    {
-        quit();
-    }
+    // if (strcmp(response, "Quitting due to an error, see the server for an error log.\0") == 0)
+    // {
+    //     quit();
+    // }
 
     // ******* DO NOT DELETE | USED TO TEST FOR NULL TERMINATOR ******** //
     // for (int i = 0; i < message_length; i++)
