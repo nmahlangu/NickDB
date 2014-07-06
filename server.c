@@ -297,12 +297,14 @@ void createOperator(int connectionfd, char* query)
     if (path == NULL)
     {
         raiseError(connectionfd, "createOperator\0", "The path for the column ~ was NULL\0", column);
+        free(path);
         return;
     }
     FILE* fp = fopen(path, "wb");
     if (fp == NULL)
     {
         raiseError(connectionfd, "createOperator\0", "The filepointer created for the path ~ was NULL\0", path);
+        free(path);
         return;
     }
     fwrite(&storage_id, sizeof(int), 1, fp);
@@ -338,7 +340,6 @@ void selectOperator(int connectionfd, char* query)
     }
 
     // parse the query
-    printf("Query: [%s]\n", query);
     char* last;
     strtok_r(query, "(", &last);
     char* firstArgument = strtok_r(NULL, ",)", &last);
@@ -350,13 +351,23 @@ void selectOperator(int connectionfd, char* query)
         return;
     }
 
-    // make sure the file to select from is valid
+    // create [error] messages
     char* prefix = "Successfully selected values from the column `\0";
     char* successfulSelectMessage = malloc(strlen(prefix) + strlen(firstArgument) + 3);
     strncpy(successfulSelectMessage, prefix, strlen(prefix) + 1);
     strncpy(successfulSelectMessage + strlen(prefix), firstArgument, strlen(firstArgument) + 1);
     strncpy(successfulSelectMessage + strlen(firstArgument) + strlen(prefix), "`.\0", 3);
-    //char* failedSelectMessage = "Unable to do this selection. The specified column does not exist in the database\0";
+    char* failedSelectMessage = "Unable to do this selection. The column ~ does not exist in the database\0";
+
+    // open column and see if it's valid
+    char* column = malloc(strlen(firstArgument) + 3);
+    sprintf(column, "db/%s",firstArgument);
+    FILE* fp = fopen(column, "rb");
+    if (fp == NULL)
+    {
+        raiseError(connectionfd, "selectOperator\0", failedSelectMessage, firstArgument);
+        free(column);
+    }
 
 }
 
