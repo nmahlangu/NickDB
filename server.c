@@ -19,7 +19,8 @@
 // function prototypes
 void evaluateCommands(int connectionfd);
 void parseQuery(int connectionfd, char* query);
-void create(int connectionfd, char* query);
+void createOperator(int connectionfd, char* query);
+void selectOperator(int connectionfd, char* query);
 void createDatabaseDirectoryIfNotPresent(void);
 
 // for error handling and quitting
@@ -111,10 +112,10 @@ void parseQuery(int connectionfd, char* query)
 {
     // error checking
     if (query == NULL)
-        raiseError(connectionfd, "parseQuery\0", "Query was NULL.\0", NULL);
+        raiseError(connectionfd, "parseQuery\0", "Query was NULL\0", NULL);
 
     // if quitting
-    else if (strcmp(query, "Quit\0") == 0)
+    else if ((strcmp(query, "Quit\0") == 0) || (strcmp(query, "quit\0") == 0))
     {
         printf("Goodbye.\n");
         quit(connectionfd);
@@ -122,7 +123,18 @@ void parseQuery(int connectionfd, char* query)
 
     // check for keyword "create"
     else if (strstr(query, "create") != NULL)
-        create(connectionfd, query);
+        createOperator(connectionfd, query);
+
+    // check for keyword "select"
+    else if (strstr(query, "select") != NULL)
+        selectOperator(connectionfd, query);
+
+    // if not a valid command
+    else
+    {
+        raiseError(connectionfd, "parseQuery\0", "Query was not a valid command\0", NULL);
+        quit(connectionfd);
+    }
 }
 
 /*
@@ -181,11 +193,27 @@ void quit(int connectionfd)
 }
 
 /*
+ *  createDatabaseDirectoryIfNotPresent()
+ *  Creates the directory that will store all of the database files if it doesn't yet exist
+ */
+void createDatabaseDirectoryIfNotPresent(void)
+{
+    // create a test filepointer
+    FILE* fp = fopen("db/", "r");
+    if (fp == NULL)
+    {
+        system("mkdir db");
+        printf("Created the directory `db/` for storing database files.\n");
+    }
+    fclose(fp);
+}
+
+/*
  *  create()
  *  Is used to create a column (represented as a binary file on disk) in the 
  *  database
  */
-void create(int connectionfd, char* query)
+void createOperator(int connectionfd, char* query)
 {
     // error checking
     if (query == NULL)
@@ -245,20 +273,21 @@ void create(int connectionfd, char* query)
 }
 
 /*
- *  createDatabaseDirectoryIfNotPresent()
- *  Creates the directory that will store all of the database files if it doesn't yet exist
+ *  select()
+ *  Is used to return the positions of matching data in the query. The result is either
+ *  stored in a variable or returned to the user right away. 
  */
-void createDatabaseDirectoryIfNotPresent(void)
+void selectOperator(int connectionfd, char* query)
 {
-    // create a test filepointer
-    FILE* fp = fopen("db/", "r");
-    if (fp == NULL)
-    {
-        system("mkdir db");
-        printf("Created the directory `db/` for storing database files.\n");
-    }
-    fclose(fp);
+    // error checking
+    if (query == NULL)
+        raiseError(connectionfd, "select\0", "Query was NULL\0", NULL);
+
+    // parse the query
+
 }
+
+
 
 
 
