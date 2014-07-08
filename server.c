@@ -72,7 +72,7 @@ int main(int argc, char const *argv[])
 
 /*
  *  evaluateCommands()
- *  Receives queries from the client and evaluates them
+ *  Receives queries from the client and evaluates them.
  */
 void evaluateCommands(int connectionfd)
 {
@@ -108,7 +108,7 @@ void evaluateCommands(int connectionfd)
 /*
  *  parseQuery()
  *  Error checks and if the query is valid, it calls the appropriate
- *  operator for the query
+ *  operator for the query.
  */
 void parseQuery(int connectionfd, char* query)
 {
@@ -148,8 +148,8 @@ void parseQuery(int connectionfd, char* query)
 
 /*
  *  raiseError()
- *  Is called when incorrect behavior occurs
- *  Note: exception_info is an optional argument, NULL if not needed
+ *  Is called when incorrect behavior occurs.
+ *  Note: exception_info is an optional argument, NULL if not needed.
  */
 void raiseError(int connectionfd, char* function, char* exception, char* exception_info)
 {
@@ -158,12 +158,12 @@ void raiseError(int connectionfd, char* function, char* exception, char* excepti
     {
         printf("Both arguments passed to raiseError() were NULL.\n");
     }
-    // if not supplementary information was provided
+    // if no supplementary information was provided
     else if (exception_info == NULL)
     {
         printf("Exception raised in function %s(): %s.\n", function, exception);
     }
-    // if supplementary information was given
+    // if supplementary information was provided
     else
     {
         // determine where to insert the supplementary information
@@ -196,14 +196,11 @@ void raiseError(int connectionfd, char* function, char* exception, char* excepti
     // tell the client the query was not evaluated
     char* errorMessage = "Query was not evaluated, see the server for an error log.\0";
     writeResponseToClient(connectionfd, errorMessage);
-
-    // exit gracefully
-    // quit(connectionfd);
 }
 
 /*
  *  createDatabaseDirectoryIfNotPresent()
- *  Creates the directory that will store all of the database files if it doesn't yet exist
+ *  Creates the directory that will store all of the database files if it doesn't yet exist.
  */
 void createDatabaseDirectoryIfNotPresent(void)
 {
@@ -219,7 +216,7 @@ void createDatabaseDirectoryIfNotPresent(void)
 
 /*
  *  quit()
- *  Is called anytime the program is correctly quitting
+ *  Is called anytime the program is correctly quitting.
  */
 void quit(int connectionfd)
 {
@@ -231,7 +228,7 @@ void quit(int connectionfd)
 /*
  *  writeResponseToClient()
  *  Is used to write a response to the client after a query has executed.
- *  Note: response must be NULL terminated
+ *  Note: response must be NULL terminated.
  */
 void writeResponseToClient(int connectionfd, char* response)
 {
@@ -253,7 +250,7 @@ void writeResponseToClient(int connectionfd, char* response)
 
 /*
  *  createCustomMessage()
- *  Returns a custom, concatenated string from 3 substrings
+ *  Returns a custom, concatenated string from 3 substrings.
  */
  char* createCustomMessage(int connectionfd, char* prefix, char* stringToBeInserted, char* suffix)
  {
@@ -285,7 +282,7 @@ void writeResponseToClient(int connectionfd, char* response)
 /*
  *  create()
  *  Is used to create a column (represented as a binary file on disk) in the 
- *  database
+ *  database.
  */
 void createOperator(int connectionfd, char* query)
 {
@@ -339,7 +336,7 @@ void createOperator(int connectionfd, char* query)
         return;
     }
 
-    // Write header data to the file. Header consists of storage type and the number of bytes
+    // write header data to the file. header consists of storage type and the number of bytes
     // in the file.
     int bytesInFile = 0;
     fwrite(&storage_id, sizeof(int), 1, fp);
@@ -352,7 +349,7 @@ void createOperator(int connectionfd, char* query)
     char* message = createCustomMessage(connectionfd, prefix, column, suffix);
     if (message == NULL)
     {
-        printf("Select operation was aborted due to above exception.\n");
+        printf("Select operation was aborted due to above database exception.\n");
         free(path);
         return;
     }
@@ -370,69 +367,108 @@ void createOperator(int connectionfd, char* query)
  */
 void selectOperator(int connectionfd, char* query)
 {
-    // error checking
+    // Error checking
     if (query == NULL)
     {
         raiseError(connectionfd, "selectOperator\0", "Query was NULL\0", NULL);
         return;
     }
 
-    // Check if the query contains an equal sign. If so, the result will be stored
-    bool containsEqualsSign = 0;
-    if (strstr(query, "=") != NULL)
+    // make sure the user is storing the result
+    if (strstr(query, "=") = NULL)
     {
-        containsEqualsSign = 1;
+        raiseError(connectionfd, "selectOperator\0", "The result of a select must be stored in an intermediate variable\0", NULL);
+        return;
     }
 
-    // if not storing the result
-    if (!containsEqualsSign)
+    // parse the query
+    char* last;
+    strtok_r(query, "(", &last);
+    char* firstArgument = strtok_r(NULL, ",)", &last);
+    char* secondArgument = strtok_r(NULL, ",)", &last);
+    char* thirdArgument = strtok_r(NULL, ",)", &last);
+    if (firstArgument == NULL)
     {
-        // parse the query
-        char* last;
-        strtok_r(query, "(", &last);
-        char* firstArgument = strtok_r(NULL, ",)", &last);
-        //char* secondArgument = strtok_r(NULL, ",)", &last);
-        //char* thirdArgument = strtok_r(NULL, ",)", &last);
-        if (firstArgument == NULL)
-        {
-            raiseError(connectionfd, "selectOperator\0", "firstArgument of the query was NULL\0", NULL);
-            return;
-        }
-
-        // open column and see if it's valid
-        char* column = malloc(strlen(firstArgument) + 3);
-        sprintf(column, "db/%s",firstArgument);
-        FILE* fp = fopen(column, "rb");
-        if (fp == NULL)
-        {
-            raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not exist in the database", firstArgument);
-            free(column);
-            return;
-        }
-
-        // read the header to see what kind of storage the file has
-        int headerStorageType;
-        fread(&headerStorageType, sizeof(int), 1, fp);
-        if ((headerStorageType != UNSORTED) && (headerStorageType != SORTED) && (headerStorageType != BTREE))
-        {
-            raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not have valid header info", NULL);
-            free(column);
-            fclose(fp);
-            return;
-        }
-
-        // read all data from the file into a buffer
-        int headerStorageSize;
-        fread(&headerStorageSize, sizeof(int), 1, fp);
-        int* arrayOfFileData = malloc(headerStorageSize * sizeof(int));
-        fread(arrayOfFileData, headerStorageSize, 1, fp);
-
-        
-
+        raiseError(connectionfd, "selectOperator\0", "firstArgument of the query was NULL\0", NULL);
+        return;
     }
 
-    // if storing the results
-    
+    // open column and see if it's valid
+    char* column = malloc(strlen(firstArgument) + 3);
+    sprintf(column, "db/%s",firstArgument);
+    FILE* fp = fopen(column, "rb");
+    if (fp == NULL)
+    {
+        raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not exist in the database\0", firstArgument);
+        free(column);
+        return;
+    }
+
+    // read the header to see what kind of storage the file has
+    int headerStorageType;
+    fread(&headerStorageType, sizeof(int), 1, fp);
+    if ((headerStorageType != UNSORTED) && (headerStorageType != SORTED) && (headerStorageType != BTREE))
+    {
+        raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not have valid header info\0", NULL);
+        free(column);
+        fclose(fp);
+        return;
+    }
+
+    // read all data from the file into a buffer
+    int headerStorageSize;
+    fread(&headerStorageSize, sizeof(int), 1, fp);
+    int* arrayOfFileData = malloc(headerStorageSize * sizeof(int));
+    fread(arrayOfFileData, headerStorageSize, 1, fp);
+    fclose(fp);
+
+    // variables for position metadata
+    int* validPositionsInArray = malloc(headerStorageSize * sizeof(int));
+    int numberOfValidPositions = 0;
+
+    // if selecting on the entire column
+    if ((secondArgument == NULL) && (thirdArgument == NULL))
+    {
+        // add all positions as valid
+        for (int i = 0; i < (headerStorageSize / sizeof(int)); i++)
+            validPositionsInArray[numberOfValidPositions++] = i;
+    }
+    // if selecting the locations of just one value
+    else if ((secondArgument != NULL) && (thirdArgument == NULL))
+    {
+        // add positions that have a value matching the entered number as valid
+        int secondArgumentCastToInteger = atoi(secondArgument);
+        for (int i = 0; i < (headerStorageSize / sizeof(int)); i++)
+        {
+            if (arrayOfFileData[i] == secondArgumentCastToInteger)
+            {
+                validPositionsInArray[numberOfValidPositions++] = i;
+            }
+        }
+    }
+    // if selecting between two values
+    else if ((secondArgument != NULL) && (thirdArgument != NULL))
+    {
+        // add positions that are bound by the two values as valid
+        int secondArgumentCastToInteger = atoi(secondArgument);
+        int thirdArgumentCastToInteger = atoi(thirdArgument);
+        for (int i = 0; i < (headerStorageSize / sizeof(int)); i++)
+        {
+            if (arrayOfFileData[i] >= secondArgumentCastToInteger
+                && arrayOfFileData[i] <= thirdArgumentCastToInteger)
+            {
+                validPositionsInArray[numberOfValidPositions++] = i;
+            }
+        }
+    }
+    // error checking
+    else
+    {
+        raiseError(connectionfd, "selectOperator\0", "secondArgument was NULL and thirdArgument was not, which cannot happen in a valid query\0", NULL);
+        return;
+    }
+
+    // store the result    
 }
 
 
