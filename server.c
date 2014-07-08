@@ -421,14 +421,14 @@ void selectOperator(int connectionfd, char* query)
             return;
         }
 
-        // create a buffer with all of the integers in the file
+        // read all data from the file into a buffer
         int headerStorageSize;
         fread(&headerStorageSize, sizeof(int), 1, fp);
         int* arrayOfFileData = malloc(headerStorageSize * sizeof(int));
-        fread(arrayOfFileData, 1, headerStorageSize, fp);
+        fread(arrayOfFileData, headerStorageSize, 1, fp);
 
-        // print out array to make sure all data was read
         
+
     }
 
     // if storing the results

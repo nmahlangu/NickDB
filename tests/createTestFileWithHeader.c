@@ -1,3 +1,7 @@
+/*
+ *  Just a script that creates a file with the new header format I'm using.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -27,7 +31,7 @@ int main(int argc, char** argv)
 	fwrite(&storageType, sizeof(int), 1, fp);
 	fwrite(&zero, sizeof(int), 1, fp);
 
-	// write 10 ints to the file
+	// write appropriate number of ints to the file
 	int i;
 	for (i = 0; i < (fileSize / 4); i++)
 	{

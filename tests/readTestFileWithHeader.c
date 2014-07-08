@@ -1,3 +1,7 @@
+/*
+ *  Just a script that reads the header of a database file.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
