@@ -322,10 +322,9 @@ void createOperator(int connectionfd, char* query)
         return;
     }
 
-    // create a file with the appropriate header
+    // error check and create the file
     char* path = malloc(4 + strlen(column));
-    path[0] = 'd'; path[1] = 'b'; path[2] = '/';
-    strncat(path, column, strlen(column));
+    sprintf(path, "db/%s", column);
     if (path == NULL)
     {
         raiseError(connectionfd, "createOperator\0", "The path for the column ~ was NULL\0", column);
@@ -339,7 +338,12 @@ void createOperator(int connectionfd, char* query)
         free(path);
         return;
     }
+
+    // Write header data to the file. Header consists of storage type and the number of bytes
+    // in the file.
+    int bytesInFile = 0;
     fwrite(&storage_id, sizeof(int), 1, fp);
+    fwrite(&bytesInFile, sizeof(int), 1, fp);
     fclose(fp);
 
     // create a message and write it to the client
@@ -373,39 +377,61 @@ void selectOperator(int connectionfd, char* query)
         return;
     }
 
-    // parse the query
-    char* last;
-    strtok_r(query, "(", &last);
-    char* firstArgument = strtok_r(NULL, ",)", &last);
-    //char* secondArgument = strtok_r(NULL, ",)", &last);
-    //char* thirdArgument = strtok_r(NULL, ",)", &last);
-    if (firstArgument == NULL)
+    // Check if the query contains an equal sign. If so, the result will be stored
+    bool containsEqualsSign = 0;
+    if (strstr(query, "=") != NULL)
     {
-        raiseError(connectionfd, "selectOperator\0", "firstArgument of the query was NULL\0", NULL);
-        return;
+        containsEqualsSign = 1;
     }
 
-    // open column and see if it's valid
-    char* column = malloc(strlen(firstArgument) + 3);
-    sprintf(column, "db/%s",firstArgument);
-    FILE* fp = fopen(column, "rb");
-    if (fp == NULL)
+    // if not storing the result
+    if (!containsEqualsSign)
     {
-        raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not exist in the database", firstArgument);
-        free(column);
-        return;
+        // parse the query
+        char* last;
+        strtok_r(query, "(", &last);
+        char* firstArgument = strtok_r(NULL, ",)", &last);
+        //char* secondArgument = strtok_r(NULL, ",)", &last);
+        //char* thirdArgument = strtok_r(NULL, ",)", &last);
+        if (firstArgument == NULL)
+        {
+            raiseError(connectionfd, "selectOperator\0", "firstArgument of the query was NULL\0", NULL);
+            return;
+        }
+
+        // open column and see if it's valid
+        char* column = malloc(strlen(firstArgument) + 3);
+        sprintf(column, "db/%s",firstArgument);
+        FILE* fp = fopen(column, "rb");
+        if (fp == NULL)
+        {
+            raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not exist in the database", firstArgument);
+            free(column);
+            return;
+        }
+
+        // read the header to see what kind of storage the file has
+        int headerStorageType;
+        fread(&headerStorageType, sizeof(int), 1, fp);
+        if ((headerStorageType != UNSORTED) && (headerStorageType != SORTED) && (headerStorageType != BTREE))
+        {
+            raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not have valid header info", NULL);
+            free(column);
+            fclose(fp);
+            return;
+        }
+
+        // create a buffer with all of the integers in the file
+        int headerStorageSize;
+        fread(&headerStorageSize, sizeof(int), 1, fp);
+        int* arrayOfFileData = malloc(headerStorageSize * sizeof(int));
+        fread(arrayOfFileData, 1, headerStorageSize, fp);
+
+        // print out array to make sure all data was read
+        
     }
 
-    // read the header to see what kind of storage the file has
-    int headerInteger;
-    fread(&headerInteger, sizeof(int), 1, fp);
-    if ((headerInteger != UNSORTED) && (headerInteger != SORTED) && (headerInteger != BTREE))
-    {
-        raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not have valid header info", NULL);
-        free(column);
-        fclose(fp);
-        return;
-    }
+    // if storing the results
     
 }
 
