@@ -28,7 +28,7 @@ void selectOperator(int connectionfd, char* query);
 void createDatabaseDirectoryIfNotPresent(void);
 
 // for error handling and quitting
-void raiseError(int connectionfd, char* function, char* exception, char* exception_info);
+void raiseDatabaseException(int connectionfd, char* function, char* exception, char* exception_info);
 void quit(int connectionfd);
 
 int main(int argc, char const *argv[])
@@ -117,7 +117,7 @@ void parseQuery(int connectionfd, char* query)
     // error checking
     if (query == NULL)
     {
-        raiseError(connectionfd, "parseQuery\0", "Query was NULL\0", NULL);
+        raiseDatabaseException(connectionfd, "parseQuery\0", "Query was NULL\0", NULL);
         return;
     }
 
@@ -143,22 +143,22 @@ void parseQuery(int connectionfd, char* query)
     // if not a valid command
     else
     {
-        raiseError(connectionfd, "parseQuery\0", "Query was not a valid command\0", NULL);
+        raiseDatabaseException(connectionfd, "parseQuery\0", "Query was not a valid command\0", NULL);
         return;
     }
 }
 
 /*
- *  raiseError()
+ *  raiseDatabaseException()
  *  Is called when incorrect behavior occurs.
  *  Note: exception_info is an optional argument, NULL if not needed.
  */
-void raiseError(int connectionfd, char* function, char* exception, char* exception_info)
+void raiseDatabaseException(int connectionfd, char* function, char* exception, char* exception_info)
 {
     // error checking
     if ((exception == NULL) && (exception_info == NULL))
     {
-        printf("Both arguments passed to raiseError() were NULL.\n");
+        printf("Both arguments passed to raiseDatabaseException() were NULL.\n");
     }
     // if no supplementary information was provided
     else if (exception_info == NULL)
@@ -237,7 +237,7 @@ void writeResponseToClient(int connectionfd, char* response)
     // error checking
     if (response == NULL)
     {
-        raiseError(connectionfd, "writeResponseToClient\0", "response to write to the client was NULL\0", NULL);
+        raiseDatabaseException(connectionfd, "writeResponseToClient\0", "response to write to the client was NULL\0", NULL);
         return;
     }
 
@@ -259,17 +259,17 @@ void writeResponseToClient(int connectionfd, char* response)
     // error checking
     if (prefix == NULL)
     {
-        raiseError(connectionfd, "createCustomMessage\0", "prefix was NULL\0", NULL);
+        raiseDatabaseException(connectionfd, "createCustomMessage\0", "prefix was NULL\0", NULL);
         return NULL;
     }
     else if (stringToBeInserted == NULL)
     {
-        raiseError(connectionfd, "createCustomMessage\0", "stringToBeInserted was NULL\0", NULL);
+        raiseDatabaseException(connectionfd, "createCustomMessage\0", "stringToBeInserted was NULL\0", NULL);
         return NULL;
     }
     else if (suffix == NULL)
     {
-        raiseError(connectionfd, "createCustomMessage\0", "suffix was NULL\0", NULL);
+        raiseDatabaseException(connectionfd, "createCustomMessage\0", "suffix was NULL\0", NULL);
         return NULL;
     }
 
@@ -291,7 +291,7 @@ void createOperator(int connectionfd, char* query)
     // error checking
     if (query == NULL)
     {
-        raiseError(connectionfd, "createOperator\0", "Query was NULL\0", NULL);
+        raiseDatabaseException(connectionfd, "createOperator\0", "Query was NULL\0", NULL);
         return;
     }
 
@@ -302,12 +302,12 @@ void createOperator(int connectionfd, char* query)
     char* storage = strtok_r(NULL, ")", &last);
     if (column == NULL || storage == NULL)
     {
-        raiseError(connectionfd, "createOperator\0", "The specified column or storage was NULL\0", NULL);
+        raiseDatabaseException(connectionfd, "createOperator\0", "The specified column or storage was NULL\0", NULL);
         return;
     }
     else if (!((strcmp(storage, "\"unsorted\"") == 0) || (strcmp(storage, "\"sorted\"") == 0) || (strcmp(storage, "\"b+tree\"") == 0)))
     {
-        raiseError(connectionfd, "createOperator\0", "The specified storage does not match unsorted, sorted, or b+tree\0", NULL);
+        raiseDatabaseException(connectionfd, "createOperator\0", "The specified storage does not match unsorted, sorted, or b+tree\0", NULL);
         return;
     }
 
@@ -317,7 +317,7 @@ void createOperator(int connectionfd, char* query)
                        ((strcmp(storage, "\"b+tree\"") == 0)   ? BTREE   : -1));
     if ((storage_id != UNSORTED) && (storage_id != SORTED) && (storage_id != BTREE))
     {
-        raiseError(connectionfd, "createOperator\0", "The specified storage does not match the storage id for either unsorted, sorted, or b+tree\0", NULL);
+        raiseDatabaseException(connectionfd, "createOperator\0", "The specified storage does not match the storage id for either unsorted, sorted, or b+tree\0", NULL);
         return;
     }
 
@@ -326,20 +326,19 @@ void createOperator(int connectionfd, char* query)
     sprintf(path, "db/%s", column);
     if (path == NULL)
     {
-        raiseError(connectionfd, "createOperator\0", "The path for the column ~ was NULL\0", column);
+        raiseDatabaseException(connectionfd, "createOperator\0", "The path for the column ~ was NULL\0", column);
         free(path);
         return;
     }
     FILE* fp = fopen(path, "wb");
     if (fp == NULL)
     {
-        raiseError(connectionfd, "createOperator\0", "The filepointer created for the path ~ was NULL\0", path);
+        raiseDatabaseException(connectionfd, "createOperator\0", "The filepointer created for the path ~ was NULL\0", path);
         free(path);
         return;
     }
 
-    // write header data to the file. header consists of storage type and the number of bytes
-    // in the file.
+    // write header data to the file. header consists of storage type and the number of bytes in the file
     int bytesInFile = 0;
     fwrite(&storage_id, sizeof(int), 1, fp);
     fwrite(&bytesInFile, sizeof(int), 1, fp);
@@ -372,14 +371,14 @@ void selectOperator(int connectionfd, char* query)
     // Error checking
     if (query == NULL)
     {
-        raiseError(connectionfd, "selectOperator\0", "Query was NULL\0", NULL);
+        raiseDatabaseException(connectionfd, "selectOperator\0", "Query was NULL\0", NULL);
         return;
     }
 
     // make sure the user is storing the result
     if (strstr(query, "=") == NULL)
     {
-        raiseError(connectionfd, "selectOperator\0", "The result of a select must be stored in an intermediate variable\0", NULL);
+        raiseDatabaseException(connectionfd, "selectOperator\0", "The result of a select must be stored in an intermediate variable\0", NULL);
         return;
     }
 
@@ -392,19 +391,19 @@ void selectOperator(int connectionfd, char* query)
     char* thirdArgument = strtok_r(NULL, ",)", &last);
     if (variableName == NULL)
     {
-        raiseError(connectionfd, "selectOperator\0", "variableName was NULL\0", NULL);
+        raiseDatabaseException(connectionfd, "selectOperator\0", "variableName was NULL\0", NULL);
         return;
     }
     else if (firstArgument == NULL)
     {
-        raiseError(connectionfd, "selectOperator\0", "firstArgument of the query was NULL\0", NULL);
+        raiseDatabaseException(connectionfd, "selectOperator\0", "firstArgument of the query was NULL\0", NULL);
         return;
     }
 
     // make sure variable name is unique
     if (checkForIntermediateResultInLinkedList(variableName) != NULL)
     {
-        raiseError(connectionfd, "selectOperator\0", "The variable ~ already exists in memory, please rename the current intermediate result variable\0", variableName);
+        raiseDatabaseException(connectionfd, "selectOperator\0", "The variable ~ already exists in memory, please rename the current intermediate result variable\0", variableName);
         return;
     }
 
@@ -414,7 +413,7 @@ void selectOperator(int connectionfd, char* query)
     FILE* fp = fopen(column, "rb");
     if (fp == NULL)
     {
-        raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not exist in the database\0", firstArgument);
+        raiseDatabaseException(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not exist in the database\0", firstArgument);
         free(column);
         return;
     }
@@ -424,7 +423,7 @@ void selectOperator(int connectionfd, char* query)
     fread(&headerStorageType, sizeof(int), 1, fp);
     if ((headerStorageType != UNSORTED) && (headerStorageType != SORTED) && (headerStorageType != BTREE))
     {
-        raiseError(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not have valid header info\0", NULL);
+        raiseDatabaseException(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not have valid header info\0", NULL);
         free(column);
         fclose(fp);
         return;
@@ -479,7 +478,7 @@ void selectOperator(int connectionfd, char* query)
     // error checking
     else
     {
-        raiseError(connectionfd, "selectOperator\0", "secondArgument was NULL and thirdArgument was not, which cannot happen in a valid query\0", NULL);
+        raiseDatabaseException(connectionfd, "selectOperator\0", "secondArgument was NULL and thirdArgument was not, which cannot happen in a valid query\0", NULL);
         return;
     }
 
@@ -494,11 +493,11 @@ void selectOperator(int connectionfd, char* query)
 
     // store the intermediate variable
     insertIntermediateResultIntoLinkedList(variable);
-    printLinkedListOfIntermediateResults();   
+    // printLinkedListOfIntermediateResults();   
 
     // create a message and write it to the client
     char* prefix = "Selected valid positions from the column `\0";
-    char* suffix = "`\0";
+    char* suffix = "`.\0";
     char* message = createCustomMessage(connectionfd, prefix, firstArgument, suffix);
     if (message == NULL)
     {

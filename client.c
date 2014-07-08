@@ -116,7 +116,7 @@ void getQuery(void)
     write(socketfd, query, query_len * sizeof(char));      
 
     // check if quitting  
-    if (strcmp(query, "Quit\0") == 0)
+    if ((strcmp(query, "Quit\0") == 0) || (strcmp(query, "quit\0") == 0))
     {
         printf("Goodbye.\n");
         quit();        
