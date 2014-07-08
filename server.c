@@ -163,7 +163,7 @@ void raiseError(int connectionfd, char* function, char* exception, char* excepti
     // if no supplementary information was provided
     else if (exception_info == NULL)
     {
-        printf("Exception raised in function %s(): %s.\n", function, exception);
+        printf("Database exception raised in function %s(): %s.\n", function, exception);
     }
     // if supplementary information was provided
     else
@@ -401,6 +401,13 @@ void selectOperator(int connectionfd, char* query)
         return;
     }
 
+    // make sure variable name is unique
+    if (checkForIntermediateResultInLinkedList(variableName) != NULL)
+    {
+        raiseError(connectionfd, "selectOperator\0", "The variable ~ already exists in memory, please rename the current intermediate result variable\0", variableName);
+        return;
+    }
+
     // open column and see if it's valid
     char* column = malloc(strlen(firstArgument) + 3);
     sprintf(column, "db/%s",firstArgument);
@@ -491,7 +498,7 @@ void selectOperator(int connectionfd, char* query)
 
     // create a message and write it to the client
     char* prefix = "Selected valid positions from the column `\0";
-    char* suffix = "\0";
+    char* suffix = "`\0";
     char* message = createCustomMessage(connectionfd, prefix, firstArgument, suffix);
     if (message == NULL)
     {
