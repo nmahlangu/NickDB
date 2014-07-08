@@ -10,6 +10,8 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 
+#include "intermediateResults.h"
+
 // storage (file) types
 #define STORAGE_TYPES 3
 #define UNSORTED 1
@@ -375,7 +377,7 @@ void selectOperator(int connectionfd, char* query)
     }
 
     // make sure the user is storing the result
-    if (strstr(query, "=") = NULL)
+    if (strstr(query, "=") == NULL)
     {
         raiseError(connectionfd, "selectOperator\0", "The result of a select must be stored in an intermediate variable\0", NULL);
         return;
