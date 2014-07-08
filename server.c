@@ -351,7 +351,7 @@ void createOperator(int connectionfd, char* query)
     char* message = createCustomMessage(connectionfd, prefix, column, suffix);
     if (message == NULL)
     {
-        printf("Select operation was aborted due to above database exception.\n");
+        printf("Create operation was aborted due to above database exception.\n");
         free(path);
         return;
     }
@@ -385,11 +385,17 @@ void selectOperator(int connectionfd, char* query)
 
     // parse the query
     char* last;
-    strtok_r(query, "(", &last);
+    char* variableName = strtok_r(query, "=", &last);
+    strtok_r(NULL, "(", &last);
     char* firstArgument = strtok_r(NULL, ",)", &last);
     char* secondArgument = strtok_r(NULL, ",)", &last);
     char* thirdArgument = strtok_r(NULL, ",)", &last);
-    if (firstArgument == NULL)
+    if (variableName == NULL)
+    {
+        raiseError(connectionfd, "selectOperator\0", "variableName was NULL\0", NULL);
+        return;
+    }
+    else if (firstArgument == NULL)
     {
         raiseError(connectionfd, "selectOperator\0", "firstArgument of the query was NULL\0", NULL);
         return;
@@ -470,7 +476,34 @@ void selectOperator(int connectionfd, char* query)
         return;
     }
 
-    // store the result    
+    // store the result in an intermediate variable
+    intermediateResult* variable = malloc(sizeof(intermediateResult));
+    variable->variableName = malloc(strlen(variableName) + 1);
+    strncpy(variable->variableName, variableName, strlen(variableName));
+    variable->numberOfValidPositions = numberOfValidPositions;
+    variable->validPositions = malloc(numberOfValidPositions * sizeof(int));
+    memcpy((void*)variable->validPositions, (void*)validPositionsInArray, (numberOfValidPositions * sizeof(int)));
+    variable->next = NULL;
+
+    // store the intermediate variable
+    insertIntermediateResultIntoLinkedList(variable);
+    printLinkedListOfIntermediateResults();   
+
+    // create a message and write it to the client
+    char* prefix = "Selected valid positions from the column `\0";
+    char* suffix = "\0";
+    char* message = createCustomMessage(connectionfd, prefix, firstArgument, suffix);
+    if (message == NULL)
+    {
+        printf("Select operation was aborted due to above database exception.\n");
+        free(arrayOfFileData);
+        return;
+    }
+    writeResponseToClient(connectionfd, message);
+
+    // print the message in the server and cleanup
+    printf("%s\n", message);
+    free(arrayOfFileData);
 }
 
 
