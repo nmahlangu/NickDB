@@ -25,6 +25,7 @@ void writeResponseToClient(int connectionfd, char* response);
 char* createCustomMessage(int connectionfd, char* prefix, char* stringToBeInserted, char* suffix);
 void createOperator(int connectionfd, char* query);
 void selectOperator(int connectionfd, char* query);
+void loadOperator(int connectionfd, char* query);
 void createDatabaseDirectoryIfNotPresent(void);
 
 // for error handling and quitting
@@ -129,13 +130,19 @@ void parseQuery(int connectionfd, char* query)
     }
 
     // check for keyword "create"
-    else if (strstr(query, "create") != NULL)
+    else if (strstr(query, "create\0") != NULL)
     {
         createOperator(connectionfd, query);
     }
 
+    // check for the keyword load
+    else if (strstr(query, "load\0") != NULL)
+    {
+        loadOperator(connectionfd, query);
+    }
+
     // check for keyword "select"
-    else if (strstr(query, "select") != NULL)
+    else if (strstr(query, "select\0") != NULL)
     {
         selectOperator(connectionfd, query);
     }
@@ -187,7 +194,9 @@ void raiseDatabaseException(int connectionfd, char* function, char* exception, c
         else
         {
             for (int i = 0; i < tildaIndex; i++)
+            {
                 printf("%c", exception[i]);
+            }
             printf("`%s`", exception_info);
             for (int i = tildaIndex, len = strlen(exception); i < len; i++)
             {
@@ -371,7 +380,7 @@ void createOperator(int connectionfd, char* query)
  */
 void selectOperator(int connectionfd, char* query)
 {
-    // Error checking
+    // error checking
     if (query == NULL)
     {
         raiseDatabaseException(connectionfd, "selectOperator\0", "Query was NULL\0", NULL);
@@ -515,6 +524,14 @@ void selectOperator(int connectionfd, char* query)
     free(arrayOfFileData);
 }
 
+/*
+ *  loadOperator()
+ *  Is used to load .csv files into the database.
+ */
+void loadOperator(int connectionfd, char* query)
+{
+
+}
 
 
 
