@@ -530,6 +530,79 @@ void selectOperator(int connectionfd, char* query)
  */
 void loadOperator(int connectionfd, char* query)
 {
+    // error checking
+    if (query == NULL)
+    {
+        raiseDatabaseException(connectionfd, "loadOperator\0", "Query was NULL\0", NULL);
+        return;
+    }
+    else if (strstr(query, "\"") == NULL)
+    {
+        raiseDatabaseException(connectionfd, "loadOperator\0", "Filename needs quotations around it\0", NULL);
+        return;
+    }
+
+    // parse the query
+    char* lasts;
+    strtok_r(query, "\"", &lasts);
+    char* fileName = strtok_r(NULL, "\"", &lasts);
+
+    // create a path to the csvTables folder with that filename
+    char* filePath = malloc(strlen(fileName) + 11);
+    sprintf(filePath, "csvTables/%s", fileName);
+    filePath[strlen(fileName) + 10] = '\0';
+
+    // try to open the file
+    FILE* fp = fopen(filePath, "r");
+    if (fp == NULL)
+    {
+        raiseDatabaseException(connectionfd, "loadOperator\0", "The file ~ does not exist in the database\0", fileName);
+        return;
+    }
+
+    // get all of the columns in the file
+    char* columnBuffer = malloc(10 * BUFSIZ);
+    int columnBufferIndex = 0;
+    int numberOfColumns = 1;
+    while(!feof(fp))
+    {
+        char character = fgetc(fp);
+        if (character == '\n')
+        {
+            columnBuffer[columnBufferIndex++] = '\0';
+            break;
+        }
+        else if (character == ',')
+        {
+            numberOfColumns++;
+        }
+        columnBuffer[columnBufferIndex++] = character;
+    }
+
+    // create an array of all the column names
+    char** columnNames = malloc(numberOfColumns * sizeof(char*));
+    char* position;
+    for (int i = 0; i < numberOfColumns; i++)
+    {
+        // copy the string
+        char* parsedColumnName = (i == 0) ? strtok_r(columnBuffer, ",", &position) : strtok_r(NULL, ",", &position);
+        printf("parsedColumnName: [%s]\n", parsedColumnName);
+        char* columnName = malloc(strlen(parsedColumnName) + 1);
+        strncpy(columnName, parsedColumnName, strlen(parsedColumnName));
+        columnNames[i] = columnName;
+
+        // make sure the column exists in the database
+        char* columnPath = malloc(strlen(columnName) + 4);
+        sprintf(columnPath, "db/%s", columnName);
+        FILE* columnFp = fopen(columnPath, "rb");
+        if (columnFp == NULL)
+        {
+            raiseDatabaseException(connectionfd, "loadOperator\0", "Could not load file into database, create a database file for the column ~ first\0", columnName);
+            return;
+        }
+        fclose(fp);
+    }
+
 
 }
 
