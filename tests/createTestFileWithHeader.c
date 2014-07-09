@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
 
 #define UNSORTED 1
 #define SORTED 2
@@ -32,10 +33,11 @@ int main(int argc, char** argv)
 	fwrite(&zero, sizeof(int), 1, fp);
 
 	// write appropriate number of ints to the file
+	srand(time(NULL));
 	int i;
 	for (i = 0; i < (fileSize / 4); i++)
 	{
-		int temp = i;
+		int temp = rand() % 10000;
 		fwrite(&temp, sizeof(int), 1, fp);
 	}
 

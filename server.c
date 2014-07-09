@@ -81,8 +81,8 @@ void evaluateCommands(int connectionfd)
     // variables
     char* query;
     int num_chars;
-    int storage_a_bytes = 0;
-    int storage_b_bytes = 0;
+    int bytesReceivedFromClientA = 0;
+    int bytesReceivedFromClientB = 0;
     bool storage = 1;
 
     // receive queries
@@ -93,10 +93,10 @@ void evaluateCommands(int connectionfd)
         fflush(stdout);
 
         // get query and its length
-        while ((storage_a_bytes = recv(connectionfd, &num_chars, sizeof(int), 0)) <= 0);
+        while ((bytesReceivedFromClientA = recv(connectionfd, &num_chars, sizeof(int), 0)) <= 0);
         query = malloc(num_chars * sizeof(int));
         write(connectionfd, &storage, sizeof(bool));
-        while ((storage_b_bytes = recv(connectionfd, query, num_chars, 0)) <= 0);
+        while ((bytesReceivedFromClientB = recv(connectionfd, query, num_chars, 0)) <= 0);
         printf("%s\n", query);
 
         // parse query and call appropriate operator
@@ -169,26 +169,29 @@ void raiseDatabaseException(int connectionfd, char* function, char* exception, c
     else
     {
         // determine where to insert the supplementary information
-        int tilda_index = -1;
+        int tildaIndex = -1;
         for (int i = 0, len = strlen(exception); i < len; i++)
         {
             if (exception[i] == '~')
             {
-                tilda_index = i;
+                tildaIndex = i;
                 break;
             }
         }
-        if (tilda_index == -1)
+        // make sure a tilda was placed in the exception string
+        if (tildaIndex == -1)
+        {
             printf("No tilda exists in the exception string, format is therefore incorrect.\n");
+        }
         // insert the supplementary information in place of the tilda
         else
         {
-            for (int i = 0; i < tilda_index; i++)
+            for (int i = 0; i < tildaIndex; i++)
                 printf("%c", exception[i]);
             printf("`%s`", exception_info);
-            for (int i = tilda_index, len = strlen(exception); i < len; i++)
+            for (int i = tildaIndex, len = strlen(exception); i < len; i++)
             {
-                if (i != tilda_index)
+                if (i != tildaIndex)
                     printf("%c", exception[i]);
             }
             printf(".\n");
@@ -312,10 +315,10 @@ void createOperator(int connectionfd, char* query)
     }
 
     // capture the storage type
-    int storage_id = (strcmp(storage, "\"unsorted\"") == 0) ? UNSORTED : 
+    int storageId = (strcmp(storage, "\"unsorted\"") == 0) ? UNSORTED : 
                        ((strcmp(storage, "\"sorted\"") == 0)   ? SORTED  :
                        ((strcmp(storage, "\"b+tree\"") == 0)   ? BTREE   : -1));
-    if ((storage_id != UNSORTED) && (storage_id != SORTED) && (storage_id != BTREE))
+    if ((storageId != UNSORTED) && (storageId != SORTED) && (storageId != BTREE))
     {
         raiseDatabaseException(connectionfd, "createOperator\0", "The specified storage does not match the storage id for either unsorted, sorted, or b+tree\0", NULL);
         return;
@@ -340,7 +343,7 @@ void createOperator(int connectionfd, char* query)
 
     // write header data to the file. header consists of storage type and the number of bytes in the file
     int bytesInFile = 0;
-    fwrite(&storage_id, sizeof(int), 1, fp);
+    fwrite(&storageId, sizeof(int), 1, fp);
     fwrite(&bytesInFile, sizeof(int), 1, fp);
     fclose(fp);
 

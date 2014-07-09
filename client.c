@@ -105,15 +105,15 @@ void getQuery(void)
     }
 
     // variables
-    int query_len = strlen(query);
-    query[query_len++] = '\0';
+    int queryLength = strlen(query);
+    query[queryLength++] = '\0';
     bool storage;
-    int storage_a_bytes = 0;
+    int bytesReceivedFromServerA = 0;
 
     // write the query length then the query
-    write(socketfd, &query_len, sizeof(int));          
-    while ((storage_a_bytes = recv(socketfd, &storage, sizeof(bool), 0)) <= 0); 
-    write(socketfd, query, query_len * sizeof(char));      
+    write(socketfd, &queryLength, sizeof(int));          
+    while ((bytesReceivedFromServerA = recv(socketfd, &storage, sizeof(bool), 0)) <= 0); 
+    write(socketfd, query, queryLength * sizeof(char));      
 
     // check if quitting  
     if ((strcmp(query, "Quit\0") == 0) || (strcmp(query, "quit\0") == 0))
@@ -123,19 +123,19 @@ void getQuery(void)
     }
 
     // get the number of chars in the response message
-    int message_length;
-    int storage_b_bytes = 0;
-    while ((storage_b_bytes = recv(socketfd, &message_length, sizeof(int), 0)) <= 0);    
+    int messageLength;
+    int bytesReceivedFromServerB = 0;
+    while ((bytesReceivedFromServerB = recv(socketfd, &messageLength, sizeof(int), 0)) <= 0);    
     write(socketfd, &storage, sizeof(bool));          
 
     // get the response message and print it
-    char* response = malloc(message_length * sizeof(char));
-    int storage_c_bytes = 0;
-    while ((storage_c_bytes = recv(socketfd, response, message_length, 0)) <= 0);       
+    char* response = malloc(messageLength * sizeof(char));
+    int bytesReceivedFromServerC = 0;
+    while ((bytesReceivedFromServerC = recv(socketfd, response, messageLength, 0)) <= 0);       
     printf("%s\n", response);
 
     // ******* DO NOT DELETE | USED TO TEST FOR NULL TERMINATOR ******** //
-    // for (int i = 0; i < message_length; i++)
+    // for (int i = 0; i < messageLength; i++)
     //     printf("[%c]", response[i]);  
     // fflush(stdout);
 
