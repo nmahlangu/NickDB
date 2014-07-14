@@ -103,6 +103,7 @@ void evaluateCommands(int connectionfd)
 
         // parse query and call appropriate operator
         parseQuery(connectionfd, query);
+        usleep(10000);
 
         // aesthetics
         printf("=====\n");
@@ -612,7 +613,6 @@ void loadOperator(int connectionfd, char* query)
     {
         // copy the string
         char* parsedColumnName = (i == 0) ? strtok_r(columnBuffer, ",", &position) : strtok_r(NULL, ",", &position);
-        printf("parsedColumnName: [%s]\n", parsedColumnName);
         char* columnName = malloc(strlen(parsedColumnName) + 1);
         strncpy(columnName, parsedColumnName, strlen(parsedColumnName));
         columnNames[i] = columnName;
@@ -626,61 +626,78 @@ void loadOperator(int connectionfd, char* query)
             raiseDatabaseException(connectionfd, "loadOperator\0", "Could not load file into database, create a database file for the column ~ first\0", columnName);
             free(columnNames);
             free(columnBuffer);
+            fclose(fp);
             return;
         }
-        fclose(fp);
     }
 
     // create the an array for storing the integers
     int** columnData = malloc(numberOfColumns * sizeof(int*));
     for (int i = 0; i < numberOfColumns; i++)
     {
-        columnData[i] = malloc(BUFSIZ * sizeof(int));
+        columnData[i] = malloc(BUFSIZ * sizeof(int*));
     }
 
-    // read and store the integers
+    // variables for reading
     int columnNumber = 0;
     int currentArrayIndex = 0;
     int currentArraySize = BUFSIZ * sizeof(int);
-    int tempReadingVariable;
-    while(1)
+    size_t sizeForGetline = BUFSIZ * sizeof(int);
+    char* readingBuffer = malloc(BUFSIZ * sizeof(int));
+    char* location = NULL;
+    bool boolForCheckingResizeSuccess;
+
+    // read data
+    while (getline(&readingBuffer, &sizeForGetline, fp) != -1)
     {
-        // read and store an integer | break if at the end of the file
-        fscanf(fp, "%d", &tempReadingVariable);
-        if (feof(fp))
+        // tokenize line
+        columnNumber = 0;
+        for (int i = 0; i < numberOfColumns; i++, columnNumber++)
         {
-            break;
+            char* buf = (i == 0) ? strtok_r(readingBuffer, ",\n", &location) : strtok_r(NULL, ",\n", &location); 
+            columnData[columnNumber][currentArrayIndex] = atoi(buf);
         }
-        columnData[columnNumber][currentArrayIndex] = tempReadingVariable;
+        currentArrayIndex++;
 
-        // update counters
-        if ((columnNumber + 1)== numberOfColumns)
+        // increase array sizes if needed
+        if ((currentArrayIndex + 1) == currentArraySize)
         {
-            currentArrayIndex++;
-        }
-        columnNumber = (columnNumber + 1) % numberOfColumns;
-
-        // increase each array's size if necessary
-        bool returnVal;
-        if ((currentArrayIndex + 1) > currentArraySize)
-        {
-            int newSize = currentArraySize + (BUFSIZ * sizeof(int));
+            // increase each array
+            int newArraySize = currentArraySize + (BUFSIZ * sizeof(int));
             for (int i = 0; i < numberOfColumns; i++)
             {
-                returnVal = increaseArraySizeByMultiplier(connectionfd, columnData[i], currentArraySize, newSize);
-                if (!returnVal)
+                // error checking
+                boolForCheckingResizeSuccess = increaseArraySizeByMultiplier(connectionfd, columnData[i], currentArraySize, newArraySize);
+                if (!boolForCheckingResizeSuccess)
                 {
-                    printf("Load operation was aborted due to the above exception\n");
-                    for (int i = 0; i < numberOfColumns; i++)
+                    // print message
+                    printf("Load operation was aborted due to above database exception.\n");
+                    for (int j = 0; j < numberOfColumns; j++)
                     {
-                        free(columnData[i]);
+                        free(columnData[j]);
                     }
-                    free(columnData);
-                    return;
+
+                    // free all buffers
+                    free(columnNames);
+                    free(columnBuffer);
+                    free(readingBuffer);
+                    fclose(fp);
                 }
             }
-            currentArraySize = newSize;
+
+            // update the current array size
+            currentArraySize = newArraySize;
         }
+    }
+
+    for (int i = 0; i < numberOfColumns; i++)
+    {
+        printf("%s: ", columnNames[i]);
+        for (int j = 0; j < currentArrayIndex; j++)
+        {
+            printf("%d-", columnData[i][j]);
+        }
+        printf("eof\n");
     }
 
 }
