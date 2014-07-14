@@ -27,6 +27,7 @@ void createOperator(int connectionfd, char* query);
 void selectOperator(int connectionfd, char* query);
 void loadOperator(int connectionfd, char* query);
 void createDatabaseDirectoryIfNotPresent(void);
+bool increaseArraySizeByMultiplier(int connectionfd, int* array, int currentArraySize, int newArraySize);
 
 // for error handling and quitting
 void raiseDatabaseException(int connectionfd, char* function, char* exception, char* exception_info);
@@ -291,6 +292,31 @@ void writeResponseToClient(int connectionfd, char* response)
     strncpy(message + strlen(prefix), stringToBeInserted, strlen(stringToBeInserted) + 1);
     strncpy(message + strlen(prefix) + strlen(stringToBeInserted), suffix, strlen(suffix) + 1);
     return message;
+ }
+
+ /*
+  *  increaseArraySizeByMultiplier()
+  *  Is used to increase an array's size on the heap.
+  */
+ bool increaseArraySizeByMultiplier(int connectionfd, int* array, int currentArraySize, int newArraySize)
+ {
+    // error checking
+    if (array == NULL)
+    {
+        raiseDatabaseException(connectionfd, "increaseArraySizeByMultiplier\0", "array was NULL\0", NULL);
+        return false;
+    }
+
+    // increase the size of the array
+    array = realloc(array, newArraySize);
+    if (array == NULL)
+    {
+        raiseDatabaseException(connectionfd, "increaseArraySizeByMultiplier\0", "The call to realloc returned a NULL pointer\0", NULL);
+        return false;
+    }
+
+    // return that operation was successful
+    return true;
  }
 
 /*
@@ -598,11 +624,64 @@ void loadOperator(int connectionfd, char* query)
         if (columnFp == NULL)
         {
             raiseDatabaseException(connectionfd, "loadOperator\0", "Could not load file into database, create a database file for the column ~ first\0", columnName);
+            free(columnNames);
+            free(columnBuffer);
             return;
         }
         fclose(fp);
     }
 
+    // create the an array for storing the integers
+    int** columnData = malloc(numberOfColumns * sizeof(int*));
+    for (int i = 0; i < numberOfColumns; i++)
+    {
+        columnData[i] = malloc(BUFSIZ * sizeof(int));
+    }
+
+    // read and store the integers
+    int columnNumber = 0;
+    int currentArrayIndex = 0;
+    int currentArraySize = BUFSIZ * sizeof(int);
+    int tempReadingVariable;
+    while(1)
+    {
+        // read and store an integer | break if at the end of the file
+        fscanf(fp, "%d", &tempReadingVariable);
+        if (feof(fp))
+        {
+            break;
+        }
+        columnData[columnNumber][currentArrayIndex] = tempReadingVariable;
+
+        // update counters
+        if ((columnNumber + 1)== numberOfColumns)
+        {
+            currentArrayIndex++;
+        }
+        columnNumber = (columnNumber + 1) % numberOfColumns;
+
+        // increase each array's size if necessary
+        bool returnVal;
+        if ((currentArrayIndex + 1) > currentArraySize)
+        {
+            int newSize = currentArraySize + (BUFSIZ * sizeof(int));
+            for (int i = 0; i < numberOfColumns; i++)
+            {
+                returnVal = increaseArraySizeByMultiplier(connectionfd, columnData[i], currentArraySize, newSize);
+                if (!returnVal)
+                {
+                    printf("Load operation was aborted due to the above exception\n");
+                    for (int i = 0; i < numberOfColumns; i++)
+                    {
+                        free(columnData[i]);
+                    }
+                    free(columnData);
+                    return;
+                }
+            }
+            currentArraySize = newSize;
+        }
+    }
 
 }
 
