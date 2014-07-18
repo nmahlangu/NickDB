@@ -49,7 +49,7 @@ int main(int argc, char const *argv[])
     printf("\033[%d;%dH", 0, 0);
 
     // welcome message
-    printf("=============================== NickDB - Client ===============================\n");
+    printf("=============================== PersonalDB - Client ===============================\n");
     printf("Waiting for a server to connect to....\n");
 
     // connect to the client

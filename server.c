@@ -660,7 +660,6 @@ void loadOperator(int connectionfd, char* query)
             for (int i = 0; i < numberOfColumns; i++)
             {
                 columnData[i] = increaseArraySizeByMultiplier(connectionfd, columnData[i], currentArraySize, newArraySize);
-                columnData[i] = NULL;
                 if (columnData[i] == NULL)
                 {
                     // clean up
@@ -682,15 +681,7 @@ void loadOperator(int connectionfd, char* query)
         }
     }
 
-    // for (int i = 0; i < numberOfColumns; i++)
-    // {
-    //     printf("%s: ", columnNames[i]);
-    //     for (int j = 0; j < currentArrayIndex; j++)
-    //     {
-    //         printf("%d-", columnData[i][j]);
-    //     }
-    //     printf("eof\n");
-    // }
+    // TODO - write data to files
 
 }
 
