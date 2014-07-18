@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #include "intermediateResults.h"
 
@@ -27,7 +28,7 @@ void createOperator(int connectionfd, char* query);
 void selectOperator(int connectionfd, char* query);
 void loadOperator(int connectionfd, char* query);
 void createDatabaseDirectoryIfNotPresent(void);
-bool increaseArraySizeByMultiplier(int connectionfd, int* array, int currentArraySize, int newArraySize);
+int* increaseArraySizeByMultiplier(int connectionfd, int* array, int currentArraySize, int newArraySize);
 
 // for error handling and quitting
 void raiseDatabaseException(int connectionfd, char* function, char* exception, char* exception_info);
@@ -299,25 +300,17 @@ void writeResponseToClient(int connectionfd, char* response)
   *  increaseArraySizeByMultiplier()
   *  Is used to increase an array's size on the heap.
   */
- bool increaseArraySizeByMultiplier(int connectionfd, int* array, int currentArraySize, int newArraySize)
+ int* increaseArraySizeByMultiplier(int connectionfd, int* array, int currentArraySize, int newArraySize)
  {
     // error checking
     if (array == NULL)
     {
-        raiseDatabaseException(connectionfd, "increaseArraySizeByMultiplier\0", "array was NULL\0", NULL);
-        return false;
+        return NULL;
     }
 
-    // increase the size of the array
-    array = realloc(array, newArraySize);
-    if (array == NULL)
-    {
-        raiseDatabaseException(connectionfd, "increaseArraySizeByMultiplier\0", "The call to realloc returned a NULL pointer\0", NULL);
-        return false;
-    }
-
-    // return that operation was successful
-    return true;
+    // increase the size of the array and return it
+    int* newArray = realloc(array, newArraySize);
+    return newArray;
  }
 
 /*
@@ -635,53 +628,52 @@ void loadOperator(int connectionfd, char* query)
     int** columnData = malloc(numberOfColumns * sizeof(int*));
     for (int i = 0; i < numberOfColumns; i++)
     {
-        columnData[i] = malloc(BUFSIZ * sizeof(int*));
+        columnData[i] = malloc(BUFSIZ * sizeof(int));
     }
 
     // variables for reading
-    int columnNumber = 0;
     int currentArrayIndex = 0;
     int currentArraySize = BUFSIZ * sizeof(int);
     size_t sizeForGetline = BUFSIZ * sizeof(int);
     char* readingBuffer = malloc(BUFSIZ * sizeof(int));
     char* location = NULL;
-    bool boolForCheckingResizeSuccess;
 
     // read data
     while (getline(&readingBuffer, &sizeForGetline, fp) != -1)
     {
-        // tokenize line
-        columnNumber = 0;
-        for (int i = 0; i < numberOfColumns; i++, columnNumber++)
+        for (int i = 0; i < numberOfColumns; i++)
         {
-            char* buf = (i == 0) ? strtok_r(readingBuffer, ",\n", &location) : strtok_r(NULL, ",\n", &location); 
-            columnData[columnNumber][currentArrayIndex] = atoi(buf);
+            // parse and create an integer
+            char* buf = (i == 0) ? strtok_r(readingBuffer, ",\n", &location) : strtok_r(NULL, ",\n", &location);
+            assert(buf != NULL);
+            int intToStore = atoi(buf);
+
+            // store the integer
+            columnData[i][currentArrayIndex] = intToStore;
         }
         currentArrayIndex++;
 
         // increase array sizes if needed
-        if ((currentArrayIndex + 1) == currentArraySize)
+        if ((currentArrayIndex + 1) == (currentArraySize / sizeof(int)))
         {
-            // increase each array
             int newArraySize = currentArraySize + (BUFSIZ * sizeof(int));
             for (int i = 0; i < numberOfColumns; i++)
             {
-                // error checking
-                boolForCheckingResizeSuccess = increaseArraySizeByMultiplier(connectionfd, columnData[i], currentArraySize, newArraySize);
-                if (!boolForCheckingResizeSuccess)
+                columnData[i] = increaseArraySizeByMultiplier(connectionfd, columnData[i], currentArraySize, newArraySize);
+                columnData[i] = NULL;
+                if (columnData[i] == NULL)
                 {
-                    // print message
-                    printf("Load operation was aborted due to above database exception.\n");
+                    // clean up
+                    raiseDatabaseException(connectionfd, "loadOperator\0", "increaseArraySizeByMultiplier returned NULL\0", NULL);
                     for (int j = 0; j < numberOfColumns; j++)
                     {
                         free(columnData[j]);
                     }
-
-                    // free all buffers
                     free(columnNames);
                     free(columnBuffer);
                     free(readingBuffer);
                     fclose(fp);
+                    return;
                 }
             }
 
@@ -690,15 +682,15 @@ void loadOperator(int connectionfd, char* query)
         }
     }
 
-    for (int i = 0; i < numberOfColumns; i++)
-    {
-        printf("%s: ", columnNames[i]);
-        for (int j = 0; j < currentArrayIndex; j++)
-        {
-            printf("%d-", columnData[i][j]);
-        }
-        printf("eof\n");
-    }
+    // for (int i = 0; i < numberOfColumns; i++)
+    // {
+    //     printf("%s: ", columnNames[i]);
+    //     for (int j = 0; j < currentArrayIndex; j++)
+    //     {
+    //         printf("%d-", columnData[i][j]);
+    //     }
+    //     printf("eof\n");
+    // }
 
 }
 
