@@ -196,6 +196,7 @@ void raiseDatabaseException(int connectionfd, char* function, char* exception, c
         // insert the supplementary information in place of the tilda
         else
         {
+            printf("Database exception raised in function %s(): ", function);
             for (int i = 0; i < tildaIndex; i++)
             {
                 printf("%c", exception[i]);
@@ -577,6 +578,7 @@ void loadOperator(int connectionfd, char* query)
     if (fp == NULL)
     {
         raiseDatabaseException(connectionfd, "loadOperator\0", "The file ~ does not exist in the database\0", fileName);
+        free(filePath);
         return;
     }
 
@@ -617,8 +619,15 @@ void loadOperator(int connectionfd, char* query)
         if (columnFp == NULL)
         {
             raiseDatabaseException(connectionfd, "loadOperator\0", "Could not load file into database, create a database file for the column ~ first\0", columnName);
+            for (int j = 0; j < i; j++)
+            {
+                free(columnNames[j]);
+            }
             free(columnNames);
+            free(columnName);
+            free(columnPath);
             free(columnBuffer);
+            free(filePath);
             fclose(fp);
             return;
         }
@@ -671,6 +680,7 @@ void loadOperator(int connectionfd, char* query)
                     }
                     free(columnNames);
                     free(columnBuffer);
+                    free(filePath);
                     free(readingBuffer);
                     fclose(fp);
                     return;
@@ -700,6 +710,8 @@ void loadOperator(int connectionfd, char* query)
                 free(columnData[j]);
             }
             free(columnNames);
+            free(filePath);
+            free(columnPath);
             free(columnBuffer);
             free(readingBuffer);
             fclose(fp);
@@ -739,7 +751,6 @@ void loadOperator(int connectionfd, char* query)
         // update the header and clean up
         fseek(fp, 4, SEEK_SET);
         fwrite(&headerStorageSize, sizeof(int), 1, columnFp);
-        printf("Size is: %d\n", headerStorageSize);
         fclose(columnFp);
     }
 
@@ -751,9 +762,20 @@ void loadOperator(int connectionfd, char* query)
     }
     free(columnNames);
     free(columnBuffer);
+    free(filePath);
     free(readingBuffer);
-    fclose(columnFp);
     fclose(fp);
+
+    // create a message and write it to the client
+    char* prefix = "Loaded `\0";
+    char* suffix = "` into the database.\0";
+    char* message = createCustomMessage(connectionfd, prefix, fileName, suffix);
+    if (message == NULL)
+    {
+        raiseDatabaseException(connectionfd, "loadOperator\0", "createCustomMessage() returned a NULL pointer\0", NULL);
+        return;
+    }
+    writeResponseToClient(connectionfd, message);
 }
 
 
