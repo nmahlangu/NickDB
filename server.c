@@ -455,7 +455,7 @@ void selectOperator(int connectionfd, char* query)
     fread(&headerStorageType, sizeof(int), 1, fp);
     if ((headerStorageType != UNSORTED) && (headerStorageType != SORTED) && (headerStorageType != BTREE))
     {
-        raiseDatabaseException(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not have valid header info\0", NULL);
+        raiseDatabaseException(connectionfd, "selectOperator\0", "Unable to do this selection. The column ~ does not have valid header info\0", column);
         free(column);
         fclose(fp);
         return;
@@ -666,6 +666,7 @@ void loadOperator(int connectionfd, char* query)
                     raiseDatabaseException(connectionfd, "loadOperator\0", "increaseArraySizeByMultiplier returned NULL\0", NULL);
                     for (int j = 0; j < numberOfColumns; j++)
                     {
+                        free(columnNames[j]);
                         free(columnData[j]);
                     }
                     free(columnNames);
@@ -681,8 +682,78 @@ void loadOperator(int connectionfd, char* query)
         }
     }
 
-    // TODO - write data to files
+    // write data to files
+    for (int i = 0; i < numberOfColumns; i++)
+    {
+        // open the file
+        char* columnPath = malloc(strlen(columnNames[i] + 4));
+        sprintf(columnPath, "db/%s", columnNames[i]);
+        columnPath[strlen(columnPath)] = '\0';
+        FILE* columnFp = fopen(columnPath, "rb");
+        if (columnFp == NULL)
+        {
+            // clean up
+            raiseDatabaseException(connectionfd, "loadOperator\0", "columnFp was a NULL pointer. Could not find a file for the column ~ in the database\0", columnNames[i]);
+            for (int j = 0; j < numberOfColumns; j++)
+            {
+                free(columnNames[j]);
+                free(columnData[j]);
+            }
+            free(columnNames);
+            free(columnBuffer);
+            free(readingBuffer);
+            fclose(fp);
+            return;
+        }
 
+        // read, store, and reset the header info
+        int headerStorageType;
+        int headerStorageSize;
+        fread(&headerStorageType, sizeof(int), 1, columnFp);
+        fread(&headerStorageSize, sizeof(int), 1, columnFp);
+        if ((headerStorageType != UNSORTED) && (headerStorageType != SORTED) && (headerStorageType != BTREE))
+        {
+            // clean up
+            raiseDatabaseException(connectionfd, "loadOperator\0", "Unable to do this load operation. The column ~ does not have valid header info\0", columnNames[i]);
+            for (int j = 0; j < numberOfColumns; j++)
+            {
+                free(columnNames[j]);
+                free(columnData[j]);
+            }
+            free(columnNames);
+            free(columnBuffer);
+            free(readingBuffer);
+            fclose(columnFp);
+            fclose(fp);
+            return;
+        }
+
+        // write to the file
+        headerStorageSize = 0;
+        for (int j = 0; j < currentArrayIndex; j++)
+        {
+            fwrite(&columnData[i][j], sizeof(int), 1, fp);
+            headerStorageSize += sizeof(int);
+        }
+
+        // update the header and clean up
+        fseek(fp, 4, SEEK_SET);
+        fwrite(&headerStorageSize, sizeof(int), 1, columnFp);
+        printf("Size is: %d\n", headerStorageSize);
+        fclose(columnFp);
+    }
+
+    // clean up
+    for (int j = 0; j < numberOfColumns; j++)
+    {
+        free(columnNames[j]);
+        free(columnData[j]);
+    }
+    free(columnNames);
+    free(columnBuffer);
+    free(readingBuffer);
+    fclose(columnFp);
+    fclose(fp);
 }
 
 
