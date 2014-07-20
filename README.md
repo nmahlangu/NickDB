@@ -12,7 +12,6 @@ the end of July.
 
 Notes
 =====
-- .csv files that are being loaded into the database must be in the same directory as server.c.
-(This should never be an issue as long as client.c, server.c, and db are in their original
-directories)
+- .csv files that are being loaded into the database must be in the directory /csvTables, otherwise
+the database does not know where to look for them.
  
