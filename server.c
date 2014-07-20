@@ -27,6 +27,7 @@ char* createCustomMessage(int connectionfd, char* prefix, char* stringToBeInsert
 void createOperator(int connectionfd, char* query);
 void selectOperator(int connectionfd, char* query);
 void loadOperator(int connectionfd, char* query);
+void printOperator(int connectionfd, chra* query);
 void createDatabaseDirectoryIfNotPresent(void);
 int* increaseArraySizeByMultiplier(int connectionfd, int* array, int currentArraySize, int newArraySize);
 
@@ -148,6 +149,12 @@ void parseQuery(int connectionfd, char* query)
     else if (strstr(query, "select\0") != NULL)
     {
         selectOperator(connectionfd, query);
+    }
+
+    // check for keyword "print"
+    else if (strstr(query, "print\0") != NULL)
+    {
+        printOperator(connectionfd, query);
     }
 
     // if not a valid command
@@ -313,6 +320,12 @@ void writeResponseToClient(int connectionfd, char* response)
     int* newArray = realloc(array, newArraySize);
     return newArray;
  }
+
+ /*
+  *  printOperator()
+  *  Is used for printing intermediate variables. Useful for debugging
+  */
+ printOperator(connectionfd, query);
 
 /*
  *  create()
@@ -761,7 +774,7 @@ void loadOperator(int connectionfd, char* query)
         fwrite(&headerStorageSize, sizeof(int), 1, columnFp);
         fclose(columnFp);
 
-        // ERASE WHEN DONE
+        // update the file size
         fseek(fp, sizeof(int), SEEK_SET);
         int fileSizeActual = i * sizeof(int);
         fwrite(&fileSizeActual, sizeof(int), 1, fp);
