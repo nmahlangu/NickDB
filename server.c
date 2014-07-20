@@ -27,9 +27,10 @@ char* createCustomMessage(int connectionfd, char* prefix, char* stringToBeInsert
 void createOperator(int connectionfd, char* query);
 void selectOperator(int connectionfd, char* query);
 void loadOperator(int connectionfd, char* query);
-void printOperator(int connectionfd, chra* query);
+void printOperator(int connectionfd, char* query);
 void createDatabaseDirectoryIfNotPresent(void);
-int* increaseArraySizeByMultiplier(int connectionfd, int* array, int currentArraySize, int newArraySize);
+int* increaseArraySizeByMultiplier(int connectionfd, int* array, int newArraySize);
+char* increaseStringSizeByMultiplier(int connectionfd, char* array, int newArraySize);
 
 // for error handling and quitting
 void raiseDatabaseException(int connectionfd, char* function, char* exception, char* exception_info);
@@ -308,7 +309,7 @@ void writeResponseToClient(int connectionfd, char* response)
   *  increaseArraySizeByMultiplier()
   *  Is used to increase an array's size on the heap.
   */
- int* increaseArraySizeByMultiplier(int connectionfd, int* array, int currentArraySize, int newArraySize)
+ int* increaseArraySizeByMultiplier(int connectionfd, int* array, int newArraySize)
  {
     // error checking
     if (array == NULL)
@@ -322,10 +323,82 @@ void writeResponseToClient(int connectionfd, char* response)
  }
 
  /*
+  *  increaseStringSizeByMultiplier()
+  *  Is used to increase a string's size on the heap.
+  */
+ char* increaseStringSizeByMultiplier(int connectionfd, char* array, int newArraySize)
+ {
+    // error checking
+    if (array == NULL)
+    {
+        return NULL;
+    }
+
+    // increase the size of the array and return it
+    char* newArray = realloc(array, newArraySize);
+    return newArray;
+ }
+
+ /*
   *  printOperator()
   *  Is used for printing intermediate variables. Useful for debugging
   */
- printOperator(connectionfd, query);
+ void printOperator(int connectionfd, char* query)
+ {
+    // error checking
+    if (query == NULL)
+    {
+        raiseDatabaseException(connectionfd, "printOperator\0", "Query was NULL\0", NULL);
+        return;
+    }
+
+    // store a copy of the query
+    char* queryCopy = malloc(strlen(query) + 1);
+    strncpy(queryCopy, query, strlen(query));
+    queryCopy[strlen(query)] = '\0';
+
+    // parse the query and error check
+    char* lasts;
+    int queryLength = strlen(query);
+    strtok_r(query, "(", &lasts);
+    char* variableName = strtok_r(NULL, ")", &lasts);
+    if (variableName == NULL)
+    {
+        raiseDatabaseException(connectionfd, "printOperator\0", "variableName was NULL. Ensure the format of the query is \"print(variableName)\"\0", NULL);
+        return;
+    }
+
+    // fix possible garbage in variable name
+    int variableNameLength = 0;
+    bool validChars = 0;
+    for (int i = 0; (i < queryLength) && (query[i] != ')'); i++)
+    {
+        if ((validChars == 0) && (queryCopy[i] == '('))
+        {
+            validChars = 1;
+        }
+
+        // count if past the '('
+        if (validChars)
+        {
+            variableNameLength++;
+        }
+    }
+    char* newVariableName = malloc(variableNameLength + 1);
+    strncpy(newVariableName, variableName, variableNameLength);
+    newVariableName[variableNameLength] = '\0';
+
+    // get the variable if it exists
+    intermediateResult* variable = checkForIntermediateResultInLinkedList(newVariableName);
+    if (variable != NULL)
+    {
+        // create a string for the client
+        // "Variable Name: " + variable->variableName;
+        // "Number of Valid Positions: "
+        // "Valid Positions: " + (string)variable->validPositions;
+
+    }
+}
 
 /*
  *  create()
@@ -689,7 +762,7 @@ void loadOperator(int connectionfd, char* query)
             int newArraySize = currentArraySize + (BUFSIZ * sizeof(int));
             for (int i = 0; i < numberOfColumns; i++)
             {
-                columnData[i] = increaseArraySizeByMultiplier(connectionfd, columnData[i], currentArraySize, newArraySize);
+                columnData[i] = increaseArraySizeByMultiplier(connectionfd, columnData[i], newArraySize);
                 if (columnData[i] == NULL)
                 {
                     // clean up
