@@ -30,11 +30,11 @@ int main(int argc, char** argv)
 	fread(&storageType, sizeof(int), 1, fp);
 	assert((storageType == UNSORTED) || (storageType == SORTED) || (storageType == BTREE));
 	if (storageType == UNSORTED)
-		printf("Storage type is UNSORTED\n");
+		printf("Storage type is UNSORTED (1)\n");
 	else if (storageType == SORTED)
-		printf("Storage type is SORTED\n");
+		printf("Storage type is SORTED (2)\n");
 	else if (storageType == BTREE)
-		printf("Storage type is BTREE\n");
+		printf("Storage type is BTREE (3)\n");
 	else
 		abort();
 

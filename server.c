@@ -462,6 +462,13 @@ void selectOperator(int connectionfd, char* query)
         return;
     }
 
+    // data to fix possible garbange variable name
+    int distanceToEquals = 0;
+    for (int i = 0; (i < strlen(query)) && (query[i] != '='); i++)
+    {
+        distanceToEquals++;
+    }
+
     // read all data from the file into a buffer
     int headerStorageSize;
     fread(&headerStorageSize, sizeof(int), 1, fp);
@@ -517,8 +524,9 @@ void selectOperator(int connectionfd, char* query)
 
     // store the result in an intermediate variable
     intermediateResult* variable = malloc(sizeof(intermediateResult));
-    variable->variableName = malloc(strlen(variableName) + 1);
-    strncpy(variable->variableName, variableName, strlen(variableName));
+    variable->variableName = malloc(distanceToEquals + 1);
+    strncpy(variable->variableName, query, distanceToEquals);
+    variableName[distanceToEquals] = '\0';
     variable->numberOfValidPositions = numberOfValidPositions;
     variable->validPositions = malloc(numberOfValidPositions * sizeof(int));
     memcpy((void*)variable->validPositions, (void*)validPositionsInArray, (numberOfValidPositions * sizeof(int)));
@@ -699,7 +707,7 @@ void loadOperator(int connectionfd, char* query)
         char* columnPath = malloc(strlen(columnNames[i] + 4));
         sprintf(columnPath, "db/%s", columnNames[i]);
         columnPath[strlen(columnPath)] = '\0';
-        FILE* columnFp = fopen(columnPath, "rb");
+        FILE* columnFp = fopen(columnPath, "rb+");
         if (columnFp == NULL)
         {
             // clean up
@@ -744,14 +752,19 @@ void loadOperator(int connectionfd, char* query)
         headerStorageSize = 0;
         for (int j = 0; j < currentArrayIndex; j++)
         {
-            fwrite(&columnData[i][j], sizeof(int), 1, fp);
-            headerStorageSize += sizeof(int);
+            fwrite(&columnData[i][j], sizeof(int), 1, columnFp);
+            headerStorageSize += (int)sizeof(int);
         }
 
         // update the header and clean up
-        fseek(fp, 4, SEEK_SET);
+        fseek(columnFp, sizeof(int), SEEK_SET);
         fwrite(&headerStorageSize, sizeof(int), 1, columnFp);
         fclose(columnFp);
+
+        // ERASE WHEN DONE
+        fseek(fp, sizeof(int), SEEK_SET);
+        int fileSizeActual = i * sizeof(int);
+        fwrite(&fileSizeActual, sizeof(int), 1, fp);
     }
 
     // clean up

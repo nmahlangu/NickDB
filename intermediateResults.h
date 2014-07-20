@@ -46,20 +46,31 @@ intermediateResult* checkForIntermediateResultInLinkedList(char* variableName)
 // simply prints a linked list (for debugging purposes)
 void printLinkedListOfIntermediateResults(void)
 {
+	printf("-----\n");
+	printf("Linked list of variables: \n");
 	intermediateResult* trav = intermediateResultRoot;
 	while (trav != NULL)
 	{
+		if (trav != intermediateResultRoot)
+		{
+			printf("-----\n");
+		}
 		printf("variableName: [%s]\n", trav->variableName);
 		printf("numberOfValidPositions: [%d]\n", trav->numberOfValidPositions);
 		printf("[");
 		for (int i = 0; i < trav->numberOfValidPositions; i++)
 		{
 			if (i + 1 != trav->numberOfValidPositions)
+			{
 				printf("%d,", trav->validPositions[i]);
+			}
 			else
+			{
 				printf("%d]\n", trav->validPositions[i]);
+			}
 		}
 		trav = trav->next;
 	}
+	printf("-----\n");
 	printf("End of list\n");
 }
