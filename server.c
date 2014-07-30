@@ -135,25 +135,25 @@ void parseQuery(int connectionfd, char* query)
     }
 
     // check for keyword "create"
-    else if (strstr(query, "create\0") != NULL)
+    else if (strncmp(query, "create(\0", 7) == 0)
     {
         createOperator(connectionfd, query);
     }
 
     // check for the keyword load
-    else if (strstr(query, "load\0") != NULL)
+    else if (strncmp(query, "load(\0", 5) == 0)
     {
         loadOperator(connectionfd, query);
     }
 
     // check for keyword "select"
-    else if (strstr(query, "select\0") != NULL)
+    else if (strstr(query, "=select(\0") != NULL)
     {
         selectOperator(connectionfd, query);
     }
 
     // check for keyword "print"
-    else if (strstr(query, "print\0") != NULL)
+    else if (strncmp(query, "print(\0", 6) == 0)
     {
         printOperator(connectionfd, query);
     }
