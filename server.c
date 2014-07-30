@@ -354,8 +354,8 @@ void writeResponseToClient(int connectionfd, char* response)
 
     // store a copy of the query
     char* queryCopy = malloc(strlen(query) + 1);
-    strncpy(queryCopy, query, strlen(query));
-    queryCopy[strlen(query)] = '\0';
+    strncpy(queryCopy, query, strlen(query) + 1);
+    // queryCopy[strlen(query)] = '\0';
 
     // parse the query and error check
     char* lasts;
@@ -371,7 +371,7 @@ void writeResponseToClient(int connectionfd, char* response)
     // fix possible garbage in variable name
     int variableNameLength = 0;
     bool validChars = 0;
-    for (int i = 0; (i < queryLength) && (query[i] != ')'); i++)
+    for (int i = 0; (i < queryLength) && (queryCopy[i] != ')'); i++)
     {
         if ((validChars == 0) && (queryCopy[i] == '('))
         {
@@ -396,6 +396,18 @@ void writeResponseToClient(int connectionfd, char* response)
         // "Variable Name: " + variable->variableName;
         // "Number of Valid Positions: "
         // "Valid Positions: " + (string)variable->validPositions;
+
+        // variable name
+        char* variableNameHeader = "Variable Name: \0";
+        char* responseForClient = malloc(strlen(variableNameHeader) + strlen(variable->variableName) + 2);
+        strncpy(responseForClient, variableNameHeader, strlen(variableNameHeader) + 1); // +1 for null terminator
+        strncpy(responseForClient + strlen(variableNameHeader), variable->variableName, strlen(variable->variableName) + 1); // +1 for null termintor
+        responseForClient[strlen(variableNameHeader) + strlen(variable->variableName)] = '\n';
+        responseForClient[strlen(variableNameHeader) + strlen(variable->variableName) + 1] = '\0';
+        for (int i = 0, len = strlen(variableNameHeader) + strlen(variable->variableName) + 2; i < len; i++)
+        {
+            printf("Char: [%c]", responseForClient[i]);
+        }
 
     }
 }
